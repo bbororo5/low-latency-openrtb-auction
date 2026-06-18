@@ -1,0 +1,16 @@
+.gradle/
+build/
+out/
+target/
+
+.idea/
+*.iml
+.vscode/
+
+.DS_Store
+
+*.log
+
+node_modules/
+
+coverage/
