@@ -178,11 +178,62 @@ flowchart TB
 
 ## 4. Runtime Architecture
 
+이 섹션은 OpenRTB BidRequest 한 건이 들어왔을 때, 시스템이 winner 또는 no-winner를 결정하기까지의 실행 흐름을 설명한다.
+
 ### 4.1 Core Runtime Flow
+
+1. `Performance Test Runner / Mock SSP`가 OpenRTB BidRequest를 보낸다.
+2. `RTB Bidding Application`은 요청 형식과 필수 필드를 검증한다.
+3. 요청에서 impression, bidfloor, site/app, device, user 등 입찰 판단에 필요한 정보를 추출한다.
+4. 사전에 준비된 campaign index에서 요청 조건에 맞는 후보 campaign을 찾는다.
+5. 후보 campaign을 기준으로 Bidder 역할의 bid/no-bid 판단을 수행한다.
+6. 생성된 BidResponse를 수집하고, timeout, late bid, invalid bid를 낙찰 후보에서 제외한다.
+7. 유효한 bid 중 낙찰 기준에 맞는 bid를 winner로 선택한다.
+8. 유효한 bid가 없으면 no-winner를 정상 결과로 반환한다.
+9. latency, timeout, invalid bid, no-winner 지표를 기록한다.
 
 ### 4.2 Performance-Critical Path
 
+성능상 중요한 경로는 BidRequest 수신부터 winner/no-winner 결정까지다.
+
+Hot path에 포함되는 작업:
+
+- BidRequest parsing
+- 필수 필드 validation
+- 입찰 판단에 필요한 request context 생성
+- campaign index 조회
+- bid/no-bid 판단
+- BidResponse validation
+- winner/no-winner 결정
+- 핵심 지표 기록
+
+Hot path에서 제외하는 작업:
+
+- campaign 원본 관리
+- 광고 심사와 운영 백오피스
+- reporting 집계
+- billing
+- impression/click/conversion tracking
+- 외부 DSP/SSP 네트워크 연동
+
+이 프로젝트는 원본 campaign 데이터를 매 요청마다 조회하지 않는다. 실시간 입찰 판단에 필요한 campaign과 targeting 데이터는 사전에 campaign index로 준비되어 있다고 보고, BidRequest 이후에는 해당 index를 기반으로 후보 탐색과 낙찰 판단을 수행한다.
+
+campaign index를 어떻게 구성하고 갱신할지는 이 문서에서 확정하지 않는다. 초기 구현에서는 테스트 데이터를 사전에 적재하는 방식으로 시작하고, 구체적인 데이터 구조와 갱신 전략은 Tech Spec 또는 ADR에서 결정한다.
+
 ### 4.3 Failure Boundaries
+
+RTB 경매에서는 일부 실패가 전체 장애를 의미하지 않는다. 시스템은 실패 유형을 분리해 처리한다.
+
+| 상황 | 처리 방식 |
+|---|---|
+| BidRequest 형식이 잘못됨 | 요청 실패로 처리한다. |
+| Bidder가 no-bid 반환 | 정상 응답으로 처리하되 낙찰 후보에서 제외한다. |
+| Bidder가 제한 시간 안에 응답하지 않음 | timeout으로 분류하고 낙찰 후보에서 제외한다. |
+| BidResponse가 deadline 이후 도착 | late bid로 분류하고 낙찰 후보에서 제외한다. |
+| BidResponse가 원 요청과 맞지 않음 | invalid bid로 분류하고 낙찰 후보에서 제외한다. |
+| 유효한 bid가 없음 | no-winner를 정상 결과로 반환한다. |
+
+핵심 원칙은 deadline 안에 검증된 bid만 winner selection에 사용한다는 것이다.
 
 ## 5. Cross-Cutting Concerns
 
