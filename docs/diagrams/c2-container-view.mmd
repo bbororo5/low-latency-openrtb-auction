@@ -1,0 +1,14 @@
+flowchart TB
+    tester["Performance Test Runner / Mock SSP"]
+    seeder["Campaign Data Seeder"]
+
+    subgraph boundary["RTB Bidding System"]
+        app["RTB Bidding Application"]
+        store[("Campaign Data Store")]
+    end
+
+    tester -->|"OpenRTB BidRequest"| app
+    app -->|"Winner / No-Winner Result"| tester
+
+    seeder -->|"Seed campaign / targeting data"| store
+    app -->|"Read campaign / targeting data"| store

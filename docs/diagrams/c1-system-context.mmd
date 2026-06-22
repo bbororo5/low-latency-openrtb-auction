@@ -1,0 +1,9 @@
+flowchart LR
+    tester["Performance Test Runner / Mock SSP"]
+    seeder["Campaign Data Seeder"]
+    system["RTB Bidding System"]
+
+    tester -->|"OpenRTB BidRequest / load test traffic"| system
+    system -->|"Winner / No-Winner Result"| tester
+
+    seeder -->|"Campaign / targeting test data"| system
