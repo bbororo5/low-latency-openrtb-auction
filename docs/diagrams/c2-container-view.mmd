@@ -1,14 +1,14 @@
 flowchart TB
-    tester["Performance Test Runner / Mock SSP"]
-    seeder["Campaign Data Seeder"]
+    tester["Publisher / Auction Client + Performance Test Runner"]
+    advertiser["Advertiser / Campaign Setup"]
 
     subgraph boundary["RTB Bidding System"]
         app["RTB Bidding Application"]
         store[("Campaign Data Store")]
     end
 
-    tester -->|"OpenRTB BidRequest"| app
-    app -->|"Winner / No-Winner Result"| tester
+    tester -->|"OpenRTB BidRequest / load test traffic"| app
+    app -->|"Winner + Auction Price / No-Winner Result"| tester
 
-    seeder -->|"Seed campaign / targeting data"| store
+    advertiser -->|"Seed campaign / targeting data"| store
     app -->|"Read campaign / targeting data"| store

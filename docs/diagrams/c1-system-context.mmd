@@ -1,9 +1,11 @@
 flowchart LR
-    tester["Performance Test Runner / Mock SSP"]
-    seeder["Campaign Data Seeder"]
-    system["RTB Bidding System"]
+    publisher["Publisher / Auction Client"]
+    advertiser["Advertiser / Campaign Setup"]
+    tester["Performance Test Runner"]
+    system["RTB Bidding System\nMock SSP/Exchange + Mock DSP/Bidder hot path"]
 
-    tester -->|"OpenRTB BidRequest / load test traffic"| system
-    system -->|"Winner / No-Winner Result"| tester
+    publisher -->|"ad opportunity / BidRequest"| system
+    tester -->|"load test traffic"| system
+    system -->|"winner + auction price / no-winner result"| publisher
 
-    seeder -->|"Campaign / targeting test data"| system
+    advertiser -->|"campaign / targeting test data"| system

@@ -11,15 +11,15 @@
   </defs>
   <rect width="1120" height="650" fill="#f8fafc"/>
   <text x="560" y="52" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700" fill="#0f172a">C2: Container View</text>
-  <text x="560" y="82" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#64748b">The hot path is kept inside one RTB application; campaign data is read from a separate data boundary.</text>
+  <text x="560" y="82" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#64748b">The hot path is kept inside one RTB application; campaign data is prepared from the advertiser side.</text>
 
   <rect x="268" y="132" width="584" height="390" rx="24" fill="#eef6ff" stroke="#93c5fd" stroke-width="2"/>
   <text x="560" y="166" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#1e3a8a">RTB Bidding System Boundary</text>
 
   <rect x="350" y="214" width="420" height="150" rx="18" fill="#1d4ed8" filter="url(#shadow)"/>
   <text x="560" y="260" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#ffffff">RTB Bidding Application</text>
-  <text x="560" y="292" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#dbeafe">Request handling / Bid decisioning</text>
-  <text x="560" y="314" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#dbeafe">Response collection / Winner selection</text>
+  <text x="560" y="292" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#dbeafe">Mock SSP fan-out / Mock Bidder decisioning</text>
+  <text x="560" y="314" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#dbeafe">BidResponse collection / Winner + price decision</text>
   <text x="560" y="336" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#dbeafe">Metrics exposure</text>
 
   <rect x="408" y="418" width="304" height="72" rx="36" fill="#dcfce7" stroke="#86efac" stroke-width="2" filter="url(#shadow)"/>
@@ -27,20 +27,20 @@
   <text x="560" y="475" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" fill="#166534">Campaign and targeting test data</text>
 
   <rect x="56" y="218" width="230" height="132" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
-  <text x="171" y="267" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#0f172a">Performance Test</text>
-  <text x="171" y="291" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#0f172a">Runner / Mock SSP</text>
-  <text x="171" y="322" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" fill="#64748b">OpenRTB traffic source</text>
+  <text x="171" y="260" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a">Publisher / Auction</text>
+  <text x="171" y="283" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a">Client + Test Runner</text>
+  <text x="171" y="316" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" fill="#64748b">OpenRTB traffic source</text>
 
   <rect x="835" y="413" width="230" height="120" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
-  <text x="950" y="461" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#0f172a">Campaign Data</text>
-  <text x="950" y="485" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#0f172a">Seeder</text>
+  <text x="950" y="461" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#0f172a">Advertiser /</text>
+  <text x="950" y="485" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#0f172a">Campaign Setup</text>
   <text x="950" y="515" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" fill="#64748b">Seed data setup</text>
 
   <path d="M286 266 C310 266 322 266 344 266" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)"/>
   <text x="318" y="242" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155">BidRequest</text>
 
   <path d="M350 322 C320 382 250 388 194 350" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)"/>
-  <text x="270" y="406" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155">Winner / No-Winner</text>
+  <text x="270" y="406" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155">Winner + Price / No-Winner</text>
 
   <path d="M560 364 L560 412" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)"/>
   <text x="646" y="394" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155">Read data</text>

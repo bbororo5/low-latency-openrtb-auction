@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="520" viewBox="0 0 1120 520" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="560" viewBox="0 0 1180 560" role="img" aria-labelledby="title desc">
   <title id="title">C1 System Context View</title>
-  <desc id="desc">Performance Test Runner and Campaign Data Seeder interact with the RTB Bidding System.</desc>
+  <desc id="desc">Publisher, advertiser setup, and performance test traffic interact with an RTB bidding system that models a mock SSP/Exchange and mock DSP/Bidder hot path.</desc>
   <defs>
     <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
       <path d="M2,2 L10,6 L2,10 Z" fill="#334155"/>
@@ -9,35 +9,43 @@
       <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.10"/>
     </filter>
   </defs>
-  <rect width="1120" height="520" fill="#f8fafc"/>
-  <text x="560" y="52" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700" fill="#0f172a">C1: System Context</text>
-  <text x="560" y="82" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#64748b">OpenRTB bid requests enter the RTB bidding boundary and return winner/no-winner results.</text>
 
-  <rect x="418" y="172" width="284" height="156" rx="18" fill="#1d4ed8" filter="url(#shadow)"/>
-  <text x="560" y="226" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#ffffff">RTB Bidding System</text>
-  <text x="560" y="258" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#dbeafe">Bid decisioning</text>
-  <text x="560" y="280" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#dbeafe">Response collection</text>
-  <text x="560" y="302" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#dbeafe">Winner selection</text>
+  <rect width="1180" height="560" fill="#f8fafc"/>
+  <text x="590" y="52" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700" fill="#0f172a">C1: System Context</text>
+  <text x="590" y="82" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#64748b">Publisher - SSP/Exchange - DSP/Bidder - Advertiser relationship modeled as a controlled RTB hot path.</text>
 
-  <rect x="70" y="175" width="260" height="150" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
-  <text x="200" y="226" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700" fill="#0f172a">Performance Test</text>
-  <text x="200" y="251" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700" fill="#0f172a">Runner / Mock SSP</text>
-  <text x="200" y="284" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#64748b">Load and request generator</text>
+  <rect x="420" y="178" width="340" height="172" rx="18" fill="#1d4ed8" filter="url(#shadow)"/>
+  <text x="590" y="224" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#ffffff">RTB Bidding System</text>
+  <text x="590" y="258" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#dbeafe">Models Mock SSP / Exchange</text>
+  <text x="590" y="282" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#dbeafe">and Mock DSP / Bidder hot path</text>
+  <text x="590" y="314" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#dbeafe">BidResponse collection + winner/price decision</text>
 
-  <rect x="790" y="175" width="260" height="150" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
-  <text x="920" y="239" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700" fill="#0f172a">Campaign Data</text>
-  <text x="920" y="264" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700" fill="#0f172a">Seeder</text>
-  <text x="920" y="296" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#64748b">Test campaign setup</text>
+  <rect x="60" y="168" width="280" height="142" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
+  <text x="200" y="218" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700" fill="#0f172a">Publisher</text>
+  <text x="200" y="244" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#0f172a">/ Auction Client</text>
+  <text x="200" y="278" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#64748b">Ad opportunity source</text>
 
-  <path d="M330 230 C360 230 382 230 412 230" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)"/>
-  <text x="370" y="207" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155">BidRequest</text>
+  <rect x="840" y="168" width="280" height="142" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
+  <text x="980" y="218" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700" fill="#0f172a">Advertiser</text>
+  <text x="980" y="244" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#0f172a">/ Campaign Setup</text>
+  <text x="980" y="278" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#64748b">Test campaign data</text>
 
-  <path d="M418 286 C380 350 302 360 230 326" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)"/>
-  <text x="326" y="374" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155">Winner / No-Winner</text>
+  <rect x="450" y="420" width="280" height="92" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
+  <text x="590" y="456" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="19" font-weight="700" fill="#0f172a">Performance Test Runner</text>
+  <text x="590" y="486" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#64748b">Load test traffic generator</text>
 
-  <path d="M790 250 C756 250 736 250 708 250" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)"/>
-  <text x="750" y="226" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155">Campaign data</text>
+  <path d="M340 230 C366 230 388 230 414 230" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="378" y="207" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155">BidRequest</text>
 
-  <rect x="310" y="412" width="500" height="52" rx="12" fill="#e0f2fe" stroke="#7dd3fc"/>
-  <text x="560" y="444" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#075985">C1 shows system boundaries only. Internal components are intentionally hidden.</text>
+  <path d="M420 302 C372 354 288 354 220 312" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="318" y="374" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155">Winner + Price / No-Winner</text>
+
+  <path d="M840 240 C812 240 790 240 766 240" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="802" y="217" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155">Campaign data</text>
+
+  <path d="M590 420 C590 396 590 376 590 356" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="700" y="390" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155">Load traffic</text>
+
+  <rect x="250" y="110" width="680" height="38" rx="10" fill="#e0f2fe" stroke="#7dd3fc"/>
+  <text x="590" y="135" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#075985">Domain flow: Publisher -> SSP/Exchange &lt;-&gt; DSP/Bidder &lt;- Advertiser</text>
 </svg>
