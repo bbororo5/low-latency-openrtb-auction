@@ -215,13 +215,85 @@ SSP의 BidResponse 검증 기준:
 
 ## 3. 캠페인 데이터 계약
 
-### 3.1 Campaign Setup -> Campaign Data Store
+이 장은 경량 DSP가 입찰 판단과 BidResponse 생성을 위해 사용하는 캠페인 데이터의 범위를 정의한다.
 
-### 3.2 Campaign Data Store -> DSP: Campaign Snapshot
+캠페인 데이터는 광고 플랫폼 전체 데이터를 의미하지 않는다. 이 프로젝트에서는 경량 DSP가 BidRequest를 평가하고, bid 또는 no-bid를 결정하고, 유효한 BidResponse를 만들기 위해 필요한 최소 데이터만 다룬다.
 
-### 3.3 DSP 내부 Campaign Repository / Index
+이 범위 제한은 Architecture의 우선 품질 기준과 연결된다. Campaign Snapshot이 커지거나 처리 규칙이 복잡해질수록 DSP의 메모리 사용량, 조회 비용, 예외 처리가 늘어나고 제한 시간 내 응답과 낮은 지연 시간을 유지하기 어려워진다.
 
-### 3.4 캠페인 데이터 갱신 범위
+### 3.1 Campaign Data Scope
+
+Campaign Snapshot은 다음 네 가지 축으로 제한한다.
+
+| 축 | 설명 | 예시 |
+|---|---|---|
+| 광고 타입 | 어떤 광고 요청에 입찰 가능한지 판단하기 위한 정보 | `banner`, `video`, `native` |
+| 타겟 조건 | 요청이 캠페인 조건과 맞는지 판단하기 위한 정보 | 국가, 디바이스, 지면 카테고리, 배너 크기, 동영상 길이 |
+| 입찰 조건 | 입찰 가능 여부와 입찰가를 결정하기 위한 정보 | 활성 여부, 기본 입찰가, 통화 |
+| 응답 정보 | OpenRTB BidResponse를 만들기 위한 최소 광고 소재 참조 정보 | `crid`, `adomain`, 테스트용 `adm` |
+
+응답 정보는 실제 광고 렌더링 시스템을 구현하기 위한 데이터가 아니다. 이 프로젝트에서는 `crid`, `adomain`, 테스트용 `adm`만 포함하고, 광고 소재 저장, CDN 배포, 노출/클릭/전환 추적은 제외한다.
+
+실시간 예산 차감, 캠페인 운영 이력, 광고 심사 상태, 리포팅용 집계 데이터는 이 장의 캠페인 데이터 범위에 포함하지 않는다.
+
+### 3.2 Campaign Setup -> Campaign Data Store
+
+`Campaign Setup`은 테스트에 사용할 광고주 캠페인 데이터를 준비하는 역할이다. 실제 광고 운영 백오피스나 관리자 화면을 의미하지 않는다.
+
+`Campaign Data Store`는 캠페인 원본 데이터의 기준 저장소다. DSP 프로세스가 재시작되더라도 같은 캠페인 데이터를 다시 읽을 수 있어야 하므로, 캠페인 데이터의 기준 출처를 DSP 내부 메모리에만 두지 않는다.
+
+Campaign Data Store에 저장되는 데이터는 3.1의 범위로 제한한다.
+
+| 필드 | 설명 |
+|---|---|
+| `campaignId` | 캠페인 식별자 |
+| `advertiserId` | 광고주 식별자 |
+| `enabled` | 입찰 가능 여부 |
+| `mediaType` | 지원 광고 타입 |
+| `targeting` | 국가, 디바이스, 지면, 크기, 동영상 길이 같은 타겟 조건 |
+| `bid` | 입찰가와 통화 |
+| `creative` | `crid`, `adomain`, 테스트용 `adm` 생성에 필요한 정보 |
+
+저장소의 실제 구현 방식은 이 장에서 확정하지 않는다. 파일, RDB, Redis 등 구체 기술 선택은 ADR에서 결정한다.
+
+### 3.3 Campaign Data Store -> DSP: Campaign Snapshot
+
+경량 DSP는 시작 시점에 Campaign Data Store에서 캠페인 데이터를 읽어 Campaign Snapshot을 구성한다.
+
+BidRequest 처리 중에는 Campaign Data Store를 동기 조회하지 않는다. 입찰 판단은 사전에 로드된 Campaign Snapshot과 DSP 내부 메모리 Repository/Index를 기준으로 수행한다.
+
+이 결정은 다음 품질 기준을 지키기 위한 것이다.
+
+| 품질 기준 | 연결 |
+|---|---|
+| 제한 시간 내 응답 | 입찰 중 저장소 조회 지연을 제거한다 |
+| 낮은 지연 시간 | hot path를 메모리 조회와 계산으로 제한한다 |
+| 실패 격리 | 저장소 장애가 진행 중인 입찰 판단으로 바로 전파되지 않는다 |
+| 관찰 가능성 | 지연 원인을 입찰 로직 중심으로 좁혀 측정할 수 있다 |
+
+### 3.4 DSP 내부 Campaign Repository / Index
+
+DSP 내부 Campaign Repository/Index는 BidRequest 처리 중 실제로 조회되는 메모리 구조다.
+
+이 장에서는 인덱스의 존재와 책임만 정의한다. 구체적인 자료구조와 최적화 방식은 경량 DSP 설계 또는 ADR에서 다룬다.
+
+DSP 내부 Repository/Index의 책임:
+
+- Campaign Snapshot을 메모리에 보관한다.
+- 광고 타입별 후보 캠페인을 빠르게 찾을 수 있어야 한다.
+- 타겟 조건과 입찰 조건을 평가할 수 있는 형태로 데이터를 제공한다.
+- BidResponse 생성을 위한 creative 참조 정보를 제공한다.
+
+### 3.5 캠페인 데이터 갱신 범위
+
+이 문서의 기본 결정은 단순 스냅샷이다. DSP는 시작 시점에 Campaign Snapshot을 한 번 로드하고, 실행 중 캠페인 변경 반영은 다루지 않는다.
+
+다음 항목은 추후 결정으로 남긴다.
+
+- 실행 중 Campaign Snapshot 주기 갱신
+- 기존 Snapshot과 새 Snapshot의 무중단 교체
+- 실시간 예산 차감
+- 여러 DSP 인스턴스 간 Campaign Snapshot 버전 일치 전략
 
 ## 4. Runtime Flow
 
