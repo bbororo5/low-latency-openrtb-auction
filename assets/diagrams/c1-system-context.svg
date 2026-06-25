@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1180" height="560" viewBox="0 0 1180 560" role="img" aria-labelledby="title desc">
   <title id="title">C1 System Context View</title>
-  <desc id="desc">Publisher, advertiser setup, and performance test traffic interact with an RTB bidding system that models a mock SSP/Exchange and mock DSP/Bidder hot path.</desc>
+  <desc id="desc">Publisher, advertiser setup, and performance test traffic interact with an RTB bidding system that implements a lightweight SSP and lightweight DSP hot path.</desc>
   <defs>
     <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
       <path d="M2,2 L10,6 L2,10 Z" fill="#334155"/>
@@ -12,12 +12,12 @@
 
   <rect width="1180" height="560" fill="#f8fafc"/>
   <text x="590" y="52" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700" fill="#0f172a">C1: System Context</text>
-  <text x="590" y="82" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#64748b">Publisher - SSP/Exchange - DSP/Bidder - Advertiser relationship modeled as a controlled RTB hot path.</text>
+  <text x="590" y="82" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#64748b">Publisher - Lightweight SSP - Lightweight DSP - Advertiser flow modeled as a controlled RTB hot path.</text>
 
   <rect x="420" y="178" width="340" height="172" rx="18" fill="#1d4ed8" filter="url(#shadow)"/>
   <text x="590" y="224" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#ffffff">RTB Bidding System</text>
-  <text x="590" y="258" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#dbeafe">Models Mock SSP / Exchange</text>
-  <text x="590" y="282" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#dbeafe">and Mock DSP / Bidder hot path</text>
+  <text x="590" y="258" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#dbeafe">Implements Lightweight SSP</text>
+  <text x="590" y="282" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#dbeafe">and Lightweight DSP hot path</text>
   <text x="590" y="314" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#dbeafe">BidResponse collection + winner/price decision</text>
 
   <rect x="60" y="168" width="280" height="142" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
@@ -47,5 +47,5 @@
   <text x="700" y="390" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155">Load traffic</text>
 
   <rect x="250" y="110" width="680" height="38" rx="10" fill="#e0f2fe" stroke="#7dd3fc"/>
-  <text x="590" y="135" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#075985">Domain flow: Publisher -> SSP/Exchange &lt;-&gt; DSP/Bidder &lt;- Advertiser</text>
+  <text x="590" y="135" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#075985">Domain flow: Publisher -> Lightweight SSP &lt;-&gt; Lightweight DSP &lt;- Advertiser</text>
 </svg>

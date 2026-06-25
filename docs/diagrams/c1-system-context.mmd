@@ -2,7 +2,7 @@ flowchart LR
     publisher["Publisher / Auction Client"]
     advertiser["Advertiser / Campaign Setup"]
     tester["Performance Test Runner"]
-    system["RTB Bidding System\nMock SSP/Exchange + Mock DSP/Bidder hot path"]
+    system["RTB Bidding System\nLightweight SSP + Lightweight DSP hot path"]
 
     publisher -->|"ad opportunity / BidRequest"| system
     tester -->|"load test traffic"| system

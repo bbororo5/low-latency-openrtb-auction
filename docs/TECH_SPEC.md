@@ -13,8 +13,8 @@ PRD가 무엇을 해결할지 정의하고, Architecture가 어떤 구조로 바
 특히 다음 질문에 답한다.
 
 - 어떤 OpenRTB 요청/응답 필드를 이 시스템의 지원 범위로 삼을 것인가?
-- 요청이 들어오면 검증, Bidder 전달, 응답 수집, 낙찰 결정이 어떤 순서로 실행되는가?
-- Mock Bidder는 어떤 설정과 캠페인 데이터를 바탕으로 입찰 여부와 입찰가를 결정하는가?
+- 요청이 들어오면 검증, 경량 DSP 전달, 응답 수집, 낙찰 결정이 어떤 순서로 실행되는가?
+- 경량 DSP는 어떤 설정과 캠페인 데이터를 바탕으로 입찰 여부와 입찰가를 결정하는가?
 - 응답 시간 초과(timeout), 늦게 도착한 입찰 응답(late bid), 잘못된 입찰 응답(invalid bid), 입찰하지 않음(no-bid)을 어떻게 구분하는가?
 - 구현이 요구사항을 만족하는지 어떤 테스트와 지표로 확인할 것인가?
 
@@ -28,10 +28,10 @@ PRD가 무엇을 해결할지 정의하고, Architecture가 어떤 구조로 바
 - 경매 결과 응답 형식
 - 애플리케이션 내부 컴포넌트 책임
 - BidRequest 검증 흐름
-- 여러 Mock Bidder로 요청을 전달하는 흐름
+- 여러 경량 DSP로 요청을 전달하는 흐름
 - BidResponse 수집과 검증 흐름
 - 낙찰자와 낙찰가 결정 규칙
-- Mock Bidder 설정과 캠페인 데이터 모델
+- 경량 DSP 설정과 캠페인 데이터 모델
 - timeout, late bid, invalid bid, no-bid, no-winner 처리
 - 기능 테스트와 부하 테스트 기준
 
@@ -57,15 +57,15 @@ PRD가 무엇을 해결할지 정의하고, Architecture가 어떤 구조로 바
 
 ## 2. OpenRTB 입출력 계약
 
-이 장은 이 시스템이 받을 OpenRTB 요청과 내부 Mock Bidder가 반환할 OpenRTB 응답의 범위를 정의한다.
+이 장은 이 시스템이 받을 OpenRTB 요청과 내부 경량 DSP가 반환할 OpenRTB 응답의 범위를 정의한다.
 
 OpenRTB 2.6에서 `BidRequest`는 최상위 입찰 요청 객체이며, `id`와 최소 1개의 `Imp` 객체가 필요하다. `Imp`는 경매에 붙일 광고 노출 기회이며, `banner`, `video`, `audio`, `native` 중 어떤 광고 형식을 제공하는지 표현한다.
 
-이 시스템은 전체 OpenRTB 2.6을 구현하지 않는다. 경매 흐름, timeout 처리, 여러 Bidder 응답 수집, 낙찰자/낙찰가 결정을 검증하기 위해 **배너, 동영상, 네이티브 광고 요청**을 지원한다.
+이 시스템은 전체 OpenRTB 2.6을 구현하지 않는다. 경매 흐름, timeout 처리, 여러 경량 DSP 응답 수집, 낙찰자/낙찰가 결정을 검증하기 위해 **배너, 동영상, 네이티브 광고 요청**을 지원한다.
 
 세 광고 타입을 지원하는 이유는 타입별로 입찰 판단 조건이 달라지기 때문이다. 배너는 크기, 동영상은 재생 시간과 프로토콜, 네이티브는 별도 native request payload를 중심으로 검증한다. 이를 통해 단순 if-else가 아니라 광고 타입별 요청 해석과 검증 책임을 코드 구조로 분리한다.
 
-`BidResponse`는 Mock Bidder가 입찰 의사를 표현하는 내부 응답으로 사용한다. 최종 API 응답은 OpenRTB 표준 객체가 아니라, 테스트와 검증을 위한 프로젝트 전용 `AuctionResult`로 반환한다.
+`BidResponse`는 경량 DSP가 입찰 의사를 표현하는 내부 응답으로 사용한다. 최종 API 응답은 OpenRTB 표준 객체가 아니라, 테스트와 검증을 위한 프로젝트 전용 `AuctionResult`로 반환한다.
 
 ### 2.1 지원할 BidRequest 필드
 
@@ -82,7 +82,7 @@ OpenRTB 2.6에서 `BidRequest`는 최상위 입찰 요청 객체이며, `id`와 
 | `BidRequest` | `id` | 필수 | 경매 요청 식별자 |
 | `BidRequest` | `imp` | 필수 | 경매에 붙일 광고 노출 기회 목록. 이 시스템에서는 1개만 허용 |
 | `BidRequest` | `at` | 선택 | 경매 방식. 명시값이 없으면 시스템 기본값을 사용 |
-| `BidRequest` | `tmax` | 선택 | Bidder 응답 수집 제한 시간. 없으면 시스템 기본값 사용 |
+| `BidRequest` | `tmax` | 선택 | 경량 DSP 응답 수집 제한 시간. 없으면 시스템 기본값 사용 |
 | `BidRequest` | `site` | 선택 | 지면 정보. 캠페인 매칭 조건으로 사용 |
 | `BidRequest` | `device` | 선택 | 디바이스/지역 정보. 캠페인 매칭 조건으로 사용 |
 | `BidRequest` | `test` | 선택 | 테스트 요청 여부. 기록용으로만 사용 |
@@ -121,16 +121,16 @@ OpenRTB 2.6에서 `BidRequest`는 최상위 입찰 요청 객체이며, `id`와 
 
 ### 2.2 지원할 BidResponse 필드
 
-Mock Bidder는 입찰 가능한 경우 다음 형태의 `BidResponse`를 반환한다.
+경량 DSP는 입찰 가능한 경우 다음 형태의 `BidResponse`를 반환한다.
 
 | 객체 | 필드 | 필수 여부 | 사용 목적 |
 |---|---|---:|---|
 | `BidResponse` | `id` | 필수 | 원본 `BidRequest.id` |
 | `BidResponse` | `seatbid` | 필수 | 입찰 묶음 |
 | `BidResponse` | `cur` | 선택 | 입찰 통화. 이 시스템에서는 `USD`만 허용 |
-| `SeatBid` | `seat` | 선택 | Mock Bidder 또는 광고주 seat 식별자 |
+| `SeatBid` | `seat` | 선택 | 경량 DSP 또는 광고주 seat 식별자 |
 | `SeatBid` | `bid` | 필수 | 실제 입찰 목록. 이 시스템에서는 1개만 사용 |
-| `Bid` | `id` | 필수 | Bidder가 생성한 입찰 식별자 |
+| `Bid` | `id` | 필수 | 경량 DSP가 생성한 입찰 식별자 |
 | `Bid` | `impid` | 필수 | 원본 `Imp.id`와 매칭되는 값 |
 | `Bid` | `price` | 필수 | CPM 기준 입찰가 |
 | `Bid` | `cid` | 선택 | 캠페인 식별자 |
@@ -154,14 +154,14 @@ BidResponse는 다음 기준으로 검증한다.
 
 입찰하지 않음(no-bid)은 다음 중 하나로 표현할 수 있다.
 
-- Mock Bidder가 내부 결과로 `NO_BID`를 반환한다.
+- 경량 DSP가 내부 결과로 `NO_BID`를 반환한다.
 - OpenRTB 응답 형태가 필요한 테스트에서는 빈 `seatbid`를 가진 응답을 사용할 수 있다.
 
 HTTP 204 방식의 no-bid는 실제 외부 DSP 연동을 하지 않으므로 다루지 않는다.
 
 ### 2.3 경매 결과 응답
 
-이 시스템은 Mock Bidder의 `BidResponse`를 그대로 외부 호출자에게 반환하지 않는다. 여러 Mock Bidder 응답을 수집한 뒤, 프로젝트 전용 `AuctionResult`를 반환한다.
+이 시스템은 경량 DSP의 `BidResponse`를 그대로 외부 호출자에게 반환하지 않는다. 여러 경량 DSP 응답을 수집한 뒤, 프로젝트 전용 `AuctionResult`를 반환한다.
 
 `AuctionResult`는 테스트와 성능 측정을 위해 다음 정보를 포함한다.
 
@@ -171,15 +171,15 @@ HTTP 204 방식의 no-bid는 실제 외부 DSP 연동을 하지 않으므로 다
 | `impId` | 경매 대상 `Imp.id` |
 | `mediaType` | `BANNER`, `VIDEO`, `NATIVE` 중 하나 |
 | `status` | `WINNER`, `NO_WINNER`, `INVALID_REQUEST`, `UNSUPPORTED_REQUEST` 중 하나 |
-| `winnerBidderId` | 낙찰된 Mock Bidder 식별자. 낙찰자가 없으면 없음 |
+| `winnerDspId` | 낙찰된 경량 DSP 식별자. 낙찰자가 없으면 없음 |
 | `winningBidId` | 낙찰된 `Bid.id`. 낙찰자가 없으면 없음 |
 | `winningPrice` | 낙찰가. 낙찰자가 없으면 없음 |
 | `auctionPrice` | 경매 규칙에 따라 결정된 최종 가격 |
 | `currency` | 통화. 이 시스템에서는 `USD` |
 | `elapsedMs` | 요청 처리 시작부터 결과 결정까지 걸린 시간 |
-| `bidderResultCounts` | bid, no-bid, timeout, late bid, invalid bid 개수 |
+| `dspResultCounts` | bid, no-bid, timeout, late bid, invalid bid 개수 |
 
-`AuctionResult`는 OpenRTB 표준 객체가 아니다. 이 프로젝트가 SSP/Exchange와 DSP/Bidder의 핵심 흐름을 함께 모델링하기 때문에, 최종 결과를 검증하기 위한 테스트 응답 객체로 둔다.
+`AuctionResult`는 OpenRTB 표준 객체가 아니다. 이 프로젝트가 경량 SSP와 경량 DSP의 핵심 흐름을 함께 구현하기 때문에, 최종 결과를 검증하기 위한 테스트 응답 객체로 둔다.
 
 ## 3. 핵심 실행 흐름
 
@@ -187,15 +187,15 @@ HTTP 204 방식의 no-bid는 실제 외부 DSP 연동을 하지 않으므로 다
 
 ### 3.2 요청 검증
 
-### 3.3 Bidder Fan-out
+### 3.3 DSP Fan-out
 
 ### 3.4 응답 수집
 
 ### 3.5 낙찰자와 낙찰가 결정
 
-## 4. Mock Bidder와 캠페인 모델
+## 4. 경량 DSP와 캠페인 모델
 
-### 4.1 Mock Bidder 설정
+### 4.1 경량 DSP 설정
 
 ### 4.2 캠페인 데이터
 

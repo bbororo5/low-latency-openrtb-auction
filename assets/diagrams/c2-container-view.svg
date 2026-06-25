@@ -18,7 +18,7 @@
 
   <rect x="350" y="214" width="420" height="150" rx="18" fill="#1d4ed8" filter="url(#shadow)"/>
   <text x="560" y="260" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#ffffff">RTB Bidding Application</text>
-  <text x="560" y="292" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#dbeafe">Mock SSP fan-out / Mock Bidder decisioning</text>
+  <text x="560" y="292" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#dbeafe">Lightweight SSP fan-out / Lightweight DSP decisioning</text>
   <text x="560" y="314" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#dbeafe">BidResponse collection / Winner + price decision</text>
   <text x="560" y="336" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#dbeafe">Metrics exposure</text>
 
