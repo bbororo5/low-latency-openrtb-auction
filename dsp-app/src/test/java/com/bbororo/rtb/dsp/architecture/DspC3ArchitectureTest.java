@@ -14,11 +14,11 @@ class DspC3ArchitectureTest {
 
         ArchRule rule = noClasses()
                 .that().resideInAnyPackage(
-                        "com.bbororo.rtb.dsp.bid..",
-                        "com.bbororo.rtb.dsp.campaign..",
-                        "com.bbororo.rtb.dsp.match..",
-                        "com.bbororo.rtb.dsp.price..",
-                        "com.bbororo.rtb.dsp.response.."
+                        "com.bbororo.rtb.dsp.bidhandler..",
+                        "com.bbororo.rtb.dsp.campaignlookup..",
+                        "com.bbororo.rtb.dsp.matcher..",
+                        "com.bbororo.rtb.dsp.pricing..",
+                        "com.bbororo.rtb.dsp.bidbuilder.."
                 )
                 .should().dependOnClassesThat()
                 .resideInAPackage("com.bbororo.rtb.dsp.adapter..")
@@ -32,12 +32,12 @@ class DspC3ArchitectureTest {
         var classes = new ClassFileImporter().importPackages("com.bbororo.rtb.dsp");
 
         ArchRule rule = noClasses()
-                .that().resideInAPackage("com.bbororo.rtb.dsp.campaign..")
+                .that().resideInAPackage("com.bbororo.rtb.dsp.campaignlookup..")
                 .should().dependOnClassesThat()
                 .resideInAnyPackage(
-                        "com.bbororo.rtb.dsp.match..",
-                        "com.bbororo.rtb.dsp.price..",
-                        "com.bbororo.rtb.dsp.response.."
+                        "com.bbororo.rtb.dsp.matcher..",
+                        "com.bbororo.rtb.dsp.pricing..",
+                        "com.bbororo.rtb.dsp.bidbuilder.."
                 )
                 .allowEmptyShould(true);
 
@@ -49,11 +49,11 @@ class DspC3ArchitectureTest {
         var classes = new ClassFileImporter().importPackages("com.bbororo.rtb.dsp");
 
         ArchRule rule = noClasses()
-                .that().resideInAPackage("com.bbororo.rtb.dsp.match..")
+                .that().resideInAPackage("com.bbororo.rtb.dsp.matcher..")
                 .should().dependOnClassesThat()
                 .resideInAnyPackage(
-                        "com.bbororo.rtb.dsp.price..",
-                        "com.bbororo.rtb.dsp.response.."
+                        "com.bbororo.rtb.dsp.pricing..",
+                        "com.bbororo.rtb.dsp.bidbuilder.."
                 )
                 .allowEmptyShould(true);
 
@@ -65,9 +65,9 @@ class DspC3ArchitectureTest {
         var classes = new ClassFileImporter().importPackages("com.bbororo.rtb.dsp");
 
         ArchRule rule = noClasses()
-                .that().resideInAPackage("com.bbororo.rtb.dsp.price..")
+                .that().resideInAPackage("com.bbororo.rtb.dsp.pricing..")
                 .should().dependOnClassesThat()
-                .resideInAPackage("com.bbororo.rtb.dsp.response..")
+                .resideInAPackage("com.bbororo.rtb.dsp.bidbuilder..")
                 .allowEmptyShould(true);
 
         rule.check(classes);

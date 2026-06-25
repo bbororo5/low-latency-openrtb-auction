@@ -14,11 +14,11 @@ class SspC3ArchitectureTest {
 
         ArchRule rule = noClasses()
                 .that().resideInAnyPackage(
-                        "com.bbororo.rtb.ssp.request..",
-                        "com.bbororo.rtb.ssp.auction..",
-                        "com.bbororo.rtb.ssp.dsp..",
-                        "com.bbororo.rtb.ssp.judge..",
-                        "com.bbororo.rtb.ssp.winner.."
+                        "com.bbororo.rtb.ssp.requesthandler..",
+                        "com.bbororo.rtb.ssp.auctionflow..",
+                        "com.bbororo.rtb.ssp.dspgateway..",
+                        "com.bbororo.rtb.ssp.bidjudge..",
+                        "com.bbororo.rtb.ssp.winnerselector.."
                 )
                 .should().dependOnClassesThat()
                 .resideInAPackage("com.bbororo.rtb.ssp.adapter..")
@@ -32,12 +32,12 @@ class SspC3ArchitectureTest {
         var classes = new ClassFileImporter().importPackages("com.bbororo.rtb.ssp");
 
         ArchRule rule = noClasses()
-                .that().resideInAPackage("com.bbororo.rtb.ssp.request..")
+                .that().resideInAPackage("com.bbororo.rtb.ssp.requesthandler..")
                 .should().dependOnClassesThat()
                 .resideInAnyPackage(
-                        "com.bbororo.rtb.ssp.dsp..",
-                        "com.bbororo.rtb.ssp.judge..",
-                        "com.bbororo.rtb.ssp.winner.."
+                        "com.bbororo.rtb.ssp.dspgateway..",
+                        "com.bbororo.rtb.ssp.bidjudge..",
+                        "com.bbororo.rtb.ssp.winnerselector.."
                 )
                 .allowEmptyShould(true);
 
@@ -49,9 +49,9 @@ class SspC3ArchitectureTest {
         var classes = new ClassFileImporter().importPackages("com.bbororo.rtb.ssp");
 
         ArchRule rule = noClasses()
-                .that().resideInAPackage("com.bbororo.rtb.ssp.judge..")
+                .that().resideInAPackage("com.bbororo.rtb.ssp.bidjudge..")
                 .should().dependOnClassesThat()
-                .resideInAPackage("com.bbororo.rtb.ssp.winner..")
+                .resideInAPackage("com.bbororo.rtb.ssp.winnerselector..")
                 .allowEmptyShould(true);
 
         rule.check(classes);
@@ -62,9 +62,9 @@ class SspC3ArchitectureTest {
         var classes = new ClassFileImporter().importPackages("com.bbororo.rtb.ssp");
 
         ArchRule rule = noClasses()
-                .that().resideInAPackage("com.bbororo.rtb.ssp.winner..")
+                .that().resideInAPackage("com.bbororo.rtb.ssp.winnerselector..")
                 .should().dependOnClassesThat()
-                .resideInAPackage("com.bbororo.rtb.ssp.dsp..")
+                .resideInAPackage("com.bbororo.rtb.ssp.dspgateway..")
                 .allowEmptyShould(true);
 
         rule.check(classes);

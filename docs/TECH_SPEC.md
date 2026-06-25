@@ -397,22 +397,22 @@ C3 컴포넌트 이름은 코드 파일명과 반드시 같을 필요는 없다.
 
 | C3 컴포넌트 | 코드 패키지 | 경계 의미 |
 |---|---|---|
-| `Request Handler` | `com.bbororo.rtb.ssp.request` | OpenRTB 요청을 내부 경매 요청으로 정규화한다. |
-| `Auction Flow` | `com.bbororo.rtb.ssp.auction` | deadline 계산, DSP 호출, 응답 수집, 판단 흐름을 조율한다. |
-| `DSP Gateway` | `com.bbororo.rtb.ssp.dsp` | DSP 호출 결과를 SSP 내부 결과로 표현한다. |
-| `Bid Judge` | `com.bbororo.rtb.ssp.judge` | DSP 응답을 낙찰 후보로 사용할 수 있는지 분류한다. |
-| `Winner Selector` | `com.bbororo.rtb.ssp.winner` | 유효한 bid 후보 중 낙찰자와 낙찰가를 결정한다. |
+| `Request Handler` | `com.bbororo.rtb.ssp.requesthandler` | OpenRTB 요청을 내부 경매 요청으로 정규화한다. |
+| `Auction Flow` | `com.bbororo.rtb.ssp.auctionflow` | deadline 계산, DSP 호출, 응답 수집, 판단 흐름을 조율한다. |
+| `DSP Gateway` | `com.bbororo.rtb.ssp.dspgateway` | DSP 호출 결과를 SSP 내부 결과로 표현한다. |
+| `Bid Judge` | `com.bbororo.rtb.ssp.bidjudge` | DSP 응답을 낙찰 후보로 사용할 수 있는지 분류한다. |
+| `Winner Selector` | `com.bbororo.rtb.ssp.winnerselector` | 유효한 bid 후보 중 낙찰자와 낙찰가를 결정한다. |
 | 외부 입출력 | `com.bbororo.rtb.ssp.adapter..` | HTTP, config, 외부 DSP client 같은 기술 경계를 둔다. |
 
 경량 DSP 패키지 대응:
 
 | C3 컴포넌트 | 코드 패키지 | 경계 의미 |
 |---|---|---|
-| `Bid Handler` | `com.bbororo.rtb.dsp.bid` | SSP 요청을 DSP 내부 입찰 판단 문맥으로 만든다. |
-| `Campaign Lookup` | `com.bbororo.rtb.dsp.campaign` | Campaign Snapshot에서 후보 캠페인을 찾는다. |
-| `Matcher` | `com.bbororo.rtb.dsp.match` | BidRequest와 캠페인의 타겟 조건을 평가한다. |
-| `Pricing` | `com.bbororo.rtb.dsp.price` | 입찰 가능 가격을 산정한다. |
-| `Bid Builder` | `com.bbororo.rtb.dsp.response` | BidResponse 또는 no-bid 결과를 만든다. |
+| `Bid Handler` | `com.bbororo.rtb.dsp.bidhandler` | SSP 요청을 DSP 내부 입찰 판단 문맥으로 만든다. |
+| `Campaign Lookup` | `com.bbororo.rtb.dsp.campaignlookup` | Campaign Snapshot에서 후보 캠페인을 찾는다. |
+| `Matcher` | `com.bbororo.rtb.dsp.matcher` | BidRequest와 캠페인의 타겟 조건을 평가한다. |
+| `Pricing` | `com.bbororo.rtb.dsp.pricing` | 입찰 가능 가격을 산정한다. |
+| `Bid Builder` | `com.bbororo.rtb.dsp.bidbuilder` | BidResponse 또는 no-bid 결과를 만든다. |
 | 외부 입출력 | `com.bbororo.rtb.dsp.adapter..` | HTTP, config, campaign store loader 같은 기술 경계를 둔다. |
 
 기존 `domain/application/adapter` 중심 패키지는 사용하지 않는다. 대신 C3 컴포넌트를 코드 패키지로 드러내고, `adapter`는 외부 입출력 기술 경계로만 유지한다.
