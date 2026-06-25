@@ -2,7 +2,7 @@
 
 OpenRTB 2.6의 입찰 요청(`BidRequest`) / 입찰 응답(`BidResponse`) 흐름을 기반으로, 실시간 광고 입찰 요청을 처리하고 제한 시간 안에 낙찰자와 낙찰가를 결정하는 저지연 RTB 입찰 시스템을 단계적으로 구현하는 프로젝트입니다.
 
-현재 단계는 **Tech Spec 작성**입니다. 아직 기술 스택, 물리 컴포넌트 분리, 배포 방식, 최적화 구현은 확정하지 않습니다.
+현재 단계는 **초기 구현 준비**입니다. Project Goal, PRD, Architecture, Tech Spec의 큰 방향은 정리되었고, 이제 BidRequest부터 BidResponse 수집과 낙찰 결정까지의 기본 동작을 구현합니다.
 
 ## Project Focus
 
@@ -47,14 +47,14 @@ OpenRTB 2.6의 입찰 요청(`BidRequest`) / 입찰 응답(`BidResponse`) 흐름
 2. PRD
 3. Architecture
 4. Tech Spec
-5. ADR
-6. Feature Development
-7. Test & Validation
-8. Performance Measurement
+5. Feature Development
+6. Test & Validation
+7. Performance Measurement
+8. ADR
 9. Optimization
 10. Retrospective
 
-각 단계의 산출물을 문서로 남겨, 단순 구현 결과가 아니라 문제 정의, 의사결정, 검증 과정을 보여주는 것을 목표로 합니다.
+ADR은 구현 전에 억지로 작성하지 않습니다. 구현과 성능 측정 중 실제 갈림길이 생겼을 때 선택지, trade-off, 결정 근거를 기록합니다.
 
 ## Documents
 

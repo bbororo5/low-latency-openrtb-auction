@@ -254,7 +254,7 @@ Campaign Data Store에 저장되는 데이터는 3.1의 범위로 제한한다.
 | `bid` | 입찰가와 통화 |
 | `creative` | `crid`, `adomain`, 테스트용 `adm` 생성에 필요한 정보 |
 
-저장소의 실제 구현 방식은 이 장에서 확정하지 않는다. 파일, RDB, Redis 등 구체 기술 선택은 ADR에서 결정한다.
+저장소의 실제 구현 방식은 이 장에서 확정하지 않는다. 초기 구현에서는 재현 가능한 테스트 데이터를 우선하고, 저장소 기술 선택은 hot path나 재현성에 영향을 줄 때 별도 검토한다.
 
 ### 3.3 Campaign Data Store -> DSP: Campaign Snapshot
 
@@ -275,7 +275,7 @@ BidRequest 처리 중에는 Campaign Data Store를 동기 조회하지 않는다
 
 DSP 내부 Campaign Repository/Index는 BidRequest 처리 중 실제로 조회되는 메모리 구조다.
 
-이 장에서는 인덱스의 존재와 책임만 정의한다. 구체적인 자료구조와 최적화 방식은 경량 DSP 설계 또는 ADR에서 다룬다.
+이 장에서는 인덱스의 존재와 책임만 정의한다. 구체적인 자료구조와 최적화 방식은 구현과 성능 측정 결과를 바탕으로 결정한다.
 
 구현 시작점은 단순 순회가 될 수 있다. 다만 Repository/Index 책임은 성능 테스트 결과에 따라 광고 타입과 타겟 조건 기반 후보 축소 구조로 개선될 수 있도록 분리한다.
 
@@ -535,7 +535,7 @@ Bid Judge가 만든 유효 후보만 Winner Selector로 전달한다.
 
 `Winner Selector`는 유효한 bid 후보 중 낙찰자와 낙찰가를 결정한다.
 
-이 프로젝트는 First Price Auction만 지원한다. `BidRequest.at`가 없으면 First Price로 처리하고, `at=1`만 지원한다. `at=2` Second Price Auction은 범위에서 제외하고 ADR 후보로 남긴다.
+이 프로젝트는 First Price Auction만 지원한다. `BidRequest.at`가 없으면 First Price로 처리하고, `at=1`만 지원한다. `at=2` Second Price Auction은 범위에서 제외한다.
 
 First Price Auction 규칙:
 

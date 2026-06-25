@@ -143,7 +143,7 @@ OpenRTB 기반 입찰 요청이다. 광고 노출 기회, 광고 타입, 지면,
 
 `Auction Price`
 
-경매 규칙에 따라 결정된 낙찰가다. 구체적인 경매 규칙은 Tech Spec 또는 ADR에서 확정한다.
+경매 규칙에 따라 결정된 낙찰가다. 이 프로젝트는 Tech Spec에서 정의한 First Price Auction을 기본 경매 규칙으로 사용한다.
 
 `No-Winner`
 
@@ -301,8 +301,8 @@ PRD는 다음 가정을 둔다.
 - 여러 경량 DSP는 동일한 구현체를 서로 다른 설정과 캠페인 데이터로 실행해 모델링할 수 있다.
 - 각 경량 DSP는 지원 광고 타입, 응답 지연, 입찰가, 실패 모드가 다를 수 있다.
 - 성능 측정은 로컬 통제 환경에서 수행한다.
-- 구체적인 기술 스택은 Tech Spec에서 결정한다.
-- 논리 컴포넌트와 물리 서비스 분리는 Tech Spec에서 결정한다.
+- 구현 세부 기술은 초기 구현 과정에서 최소 범위로 선택한다.
+- 경량 SSP와 경량 DSP는 별도 애플리케이션으로 분리한다.
 
 ## 12. Milestones
 
@@ -322,29 +322,29 @@ PRD는 다음 가정을 둔다.
 
 구현 구조, 기술 스택, API 계약, 테스트 전략을 결정한다.
 
-`M5: ADR`
-
-주요 의사결정과 trade-off를 기록한다.
-
-`M6: Contract and Test Fixture Setup`
+`M5: Contract and Test Fixture Setup`
 
 OpenRTB 요청/응답 DTO, 지원 필드 검증 규칙, 예시 BidRequest, 예시 BidResponse, 테스트용 캠페인 데이터를 준비한다.
 
-`M7: Lightweight DSP Flow`
+`M6: Lightweight DSP Flow`
 
 경량 DSP의 광고 타입별 요청 해석, 캠페인 매칭, bid/no-bid 결정, 입찰가 산정, BidResponse 생성을 구현한다.
 
-`M8: Lightweight SSP Auction Flow`
+`M7: Lightweight SSP Auction Flow`
 
 경량 SSP의 BidRequest 수신, 여러 경량 DSP 호출, 응답 수집, timeout 처리, 낙찰자와 낙찰가 결정을 구현한다.
 
-`M9: Failure Case Handling`
+`M8: Failure Case Handling`
 
 no-bid, timeout, invalid bid, late bid, no-winner 시나리오를 구현한다.
 
-`M10: Performance Measurement`
+`M9: Performance Measurement`
 
 로컬 통제 환경에서 응답 시간(latency), 제한 시간 내 응답률(deadline compliance), 관찰된 처리량(observed throughput)을 측정한다.
+
+`M10: ADR`
+
+구현과 성능 측정 중 실제 갈림길이 생긴 결정만 선택지, trade-off, 근거와 함께 기록한다.
 
 `M11: Optimization`
 
@@ -360,11 +360,7 @@ no-bid, timeout, invalid bid, late bid, no-winner 시나리오를 구현한다.
 
 - OpenRTB 2.6 기반 요청/응답 중 어떤 필드까지 지원할 것인가?
 - 광고 타입과 타입별 지원 필드는 어디까지 둘 것인가?
-- 경량 DSP는 내부 논리 컴포넌트로 둘 것인가, 별도 실행 단위로 둘 것인가?
-- 여러 경량 DSP를 동일 구현체의 여러 설정/데이터 인스턴스로 둘 것인가, 별도 실행 단위로 둘 것인가?
 - DSP 라우팅 최적화를 다루지 않는 결정은 타당한가?
-- 경매 규칙은 first-price만 지원할 것인가?
-- 동일 가격 bid의 tie-breaker는 어떻게 정의할 것인가?
 - 후보 광고 캠페인 매칭은 어느 수준까지 구현할 것인가?
 - 성능 테스트의 로컬 기준 환경은 어떻게 문서화할 것인가?
 - 성능 최적화 전후 비교 기준은 무엇으로 둘 것인가?
