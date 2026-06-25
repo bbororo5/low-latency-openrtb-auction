@@ -397,37 +397,35 @@ C3 컴포넌트 이름은 코드 파일명과 반드시 같을 필요는 없다.
 
 ## 5. 경량 SSP 설계
 
-### 5.1 책임
+### 5.1 SSP 책임 요약
 
-### 5.2 BidRequest 수신과 검증
+### 5.2 Request Handler
 
-### 5.3 DSP Fan-out
+### 5.3 Auction Flow
 
-### 5.4 BidResponse 수집
+### 5.4 DSP Gateway
 
-### 5.5 Timeout / Late Bid 처리
+### 5.5 Bid Judge
 
-### 5.6 Invalid Bid 검증
+### 5.6 Winner Selector
 
-### 5.7 낙찰자와 낙찰가 결정
+### 5.7 SSP 처리 결과
 
 ## 6. 경량 DSP 설계
 
-### 6.1 책임
+### 6.1 DSP 책임 요약
 
-### 6.2 DSP 설정
+### 6.2 Bid Handler
 
-### 6.3 캠페인 데이터 모델
+### 6.3 Campaign Lookup
 
-### 6.4 광고 타입별 요청 해석
+### 6.4 Matcher
 
-### 6.5 입찰 여부 결정
+### 6.5 Pricing
 
-### 6.6 입찰가 결정
+### 6.6 Bid Builder
 
-### 6.7 BidResponse 생성
-
-### 6.8 No-Bid 반환
+### 6.7 DSP 처리 결과
 
 ## 7. 공통 실패 처리
 
