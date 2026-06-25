@@ -143,7 +143,7 @@ flowchart LR
 
 ![C2 Container View](../assets/diagrams/c2-container-view.svg)
 
-`Lightweight SSP`는 OpenRTB BidRequest를 받아 경량 DSP로 전달하고, BidResponse를 수집해 낙찰자와 낙찰가를 결정한다.
+`Lightweight SSP Application`은 OpenRTB BidRequest를 받아 경량 DSP로 전달하고, BidResponse를 수집해 낙찰자와 낙찰가를 결정한다.
 
 주요 책임:
 
@@ -153,7 +153,7 @@ flowchart LR
 - timeout, late bid, invalid bid 분류
 - 낙찰자/낙찰가 또는 낙찰 없음 결정
 
-`Lightweight DSP`는 BidRequest를 평가해 입찰 여부와 입찰가를 결정한다.
+`Lightweight DSP Application`은 BidRequest를 평가해 입찰 여부와 입찰가를 결정한다.
 
 주요 책임:
 
@@ -163,9 +163,9 @@ flowchart LR
 - 입찰가 산정
 - BidResponse 생성
 
-`Campaign Data Store`는 입찰 여부 판단에 필요한 광고 캠페인과 타겟팅 데이터를 제공한다.
+경량 DSP는 입찰 판단에 필요한 캠페인 데이터를 내부 Campaign Repository 또는 인메모리 인덱스로 조회한다. 이 데이터 구조는 C2 컨테이너가 아니라 DSP 애플리케이션 내부 컴포넌트로 보고, Tech Spec의 C3/데이터 모델에서 다룬다.
 
-이 문서에서는 저장소의 구체적인 구현 기술을 확정하지 않는다. 데이터 적재 방식, 저장소 종류, 인메모리 캐시 전략은 Tech Spec 또는 ADR에서 결정한다.
+원본 캠페인 데이터를 외부 저장소에 둘지, 테스트 fixture에서 로드할지, 부팅 시 로드한 뒤 프로세스 내부 메모리에 유지할지는 이 문서에서 확정하지 않는다. 단, 입찰 hot path에서 매 요청마다 외부 저장소를 조회하는 구조는 전제로 두지 않는다.
 
 실제 OpenRTB 생태계에서 DSP는 광고 구매 측 외부 시스템이다. 이 프로젝트는 RTB 입찰 핵심 경로를 작게 검증하기 위해 경량 DSP를 시스템 내부 컨테이너로 둔다.
 
@@ -177,12 +177,10 @@ flowchart LR
 ```mermaid
 flowchart TB
     client["Auction Client"]
-    advertiser["Campaign Setup"]
 
     subgraph boundary["RTB Bidding System"]
-        ssp["Lightweight SSP"]
-        dsp["Lightweight DSP"]
-        store[("Campaign Data Store")]
+        ssp["Lightweight SSP Application"]
+        dsp["Lightweight DSP Application"]
     end
 
     client -->|"BidRequest"| ssp
@@ -190,9 +188,6 @@ flowchart TB
 
     ssp -->|"BidRequest"| dsp
     dsp -->|"BidResponse / No-Bid"| ssp
-
-    advertiser -->|"Seed data"| store
-    dsp -->|"Read campaigns"| store
 ```
 
 </details>
@@ -204,7 +199,7 @@ flowchart TB
 ### 4.1 Core Runtime Flow
 
 1. `Publisher / Auction Client`가 OpenRTB BidRequest를 보낸다. 성능 테스트에서는 `Performance Test Runner`가 이 트래픽을 대신 생성한다.
-2. `RTB Bidding Application`은 요청 형식과 필수 필드를 검증한다.
+2. `Lightweight SSP Application`은 요청 형식과 필수 필드를 검증한다.
 3. 요청에서 광고 노출 기회, 최소 입찰가, 지면, 디바이스, 사용자 등 입찰 판단에 필요한 정보를 추출한다.
 4. 경량 SSP는 동일한 BidRequest를 등록된 여러 경량 DSP에게 전달한다.
 5. 각 경량 DSP는 사전에 준비된 데이터에서 요청 조건에 맞는 후보 광고 캠페인을 찾는다.

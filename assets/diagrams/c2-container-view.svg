@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="620" viewBox="0 0 1120 620" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="560" viewBox="0 0 1120 560" role="img" aria-labelledby="title desc">
   <title id="title">C2 Container View</title>
-  <desc id="desc">C2 view showing Auction Client, Lightweight SSP, Lightweight DSP, Campaign Data Store, and Campaign Setup.</desc>
+  <desc id="desc">C2 view showing Auction Client, Lightweight SSP Application, and Lightweight DSP Application.</desc>
   <defs>
     <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
       <path d="M2,2 L10,6 L2,10 Z" fill="#334155"/>
@@ -10,44 +10,32 @@
     </filter>
   </defs>
 
-  <rect width="1120" height="620" fill="#f8fafc"/>
+  <rect width="1120" height="560" fill="#f8fafc"/>
   <text x="560" y="54" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700" fill="#0f172a">C2: Container View</text>
 
-  <rect x="270" y="110" width="600" height="390" rx="16" fill="#eef6ff" stroke="#93c5fd" stroke-width="2"/>
-  <text x="570" y="144" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#1e3a8a">RTB Bidding System</text>
+  <rect x="300" y="120" width="660" height="300" rx="16" fill="#eef6ff" stroke="#93c5fd" stroke-width="2"/>
+  <text x="630" y="154" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#1e3a8a">RTB Bidding System</text>
 
-  <rect x="70" y="230" width="160" height="84" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
-  <text x="150" y="278" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#0f172a">Auction Client</text>
+  <rect x="80" y="235" width="170" height="90" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
+  <text x="165" y="286" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#0f172a">Auction Client</text>
 
-  <rect x="330" y="205" width="190" height="105" rx="12" fill="#1d4ed8" filter="url(#shadow)"/>
-  <text x="425" y="252" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#ffffff">Lightweight SSP</text>
-  <text x="425" y="278" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" fill="#dbeafe">Auction control</text>
+  <rect x="370" y="215" width="220" height="120" rx="12" fill="#1d4ed8" filter="url(#shadow)"/>
+  <text x="480" y="264" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#ffffff">Lightweight SSP</text>
+  <text x="480" y="292" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="700" fill="#ffffff">Application</text>
 
-  <rect x="615" y="205" width="190" height="105" rx="12" fill="#0f766e" filter="url(#shadow)"/>
-  <text x="710" y="252" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#ffffff">Lightweight DSP</text>
-  <text x="710" y="278" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" fill="#ccfbf1">Bid decision</text>
+  <rect x="690" y="215" width="220" height="120" rx="12" fill="#0f766e" filter="url(#shadow)"/>
+  <text x="800" y="264" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#ffffff">Lightweight DSP</text>
+  <text x="800" y="292" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="700" fill="#ffffff">Application</text>
 
-  <rect x="555" y="380" width="250" height="72" rx="14" fill="#dcfce7" stroke="#86efac" stroke-width="2" filter="url(#shadow)"/>
-  <text x="680" y="423" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#14532d">Campaign Data Store</text>
+  <path d="M250 264 L364 264" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+  <text x="307" y="245" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">BidRequest</text>
 
-  <rect x="905" y="382" width="155" height="72" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
-  <text x="982" y="424" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="700" fill="#0f172a">Campaign Setup</text>
+  <path d="M370 304 C316 356 250 352 194 325" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+  <text x="286" y="374" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">AuctionResult</text>
 
-  <path d="M230 258 L324 258" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
-  <text x="277" y="242" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">BidRequest</text>
+  <path d="M590 248 L684 248" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+  <text x="637" y="230" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">BidRequest</text>
 
-  <path d="M330 292 C288 338 240 336 180 314" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
-  <text x="255" y="354" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">AuctionResult</text>
-
-  <path d="M520 238 L609 238" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
-  <text x="564" y="222" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">BidRequest</text>
-
-  <path d="M615 278 L526 278" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
-  <text x="570" y="302" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">BidResponse / No-Bid</text>
-
-  <path d="M710 310 L694 374" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
-  <text x="750" y="350" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">Read</text>
-
-  <path d="M905 418 L811 418" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
-  <text x="858" y="402" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">Seed</text>
+  <path d="M690 302 L596 302" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+  <text x="643" y="326" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">BidResponse / No-Bid</text>
 </svg>
