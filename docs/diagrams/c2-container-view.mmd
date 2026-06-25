@@ -1,14 +1,18 @@
 flowchart TB
-    tester["Publisher / Auction Client + Performance Test Runner"]
-    advertiser["Advertiser / Campaign Setup"]
+    client["Auction Client"]
+    advertiser["Campaign Setup"]
 
     subgraph boundary["RTB Bidding System"]
-        app["RTB Bidding Application"]
+        ssp["Lightweight SSP"]
+        dsp["Lightweight DSP"]
         store[("Campaign Data Store")]
     end
 
-    tester -->|"OpenRTB BidRequest / load test traffic"| app
-    app -->|"Winner + Auction Price / No-Winner Result"| tester
+    client -->|"BidRequest"| ssp
+    ssp -->|"AuctionResult"| client
 
-    advertiser -->|"Seed campaign / targeting data"| store
-    app -->|"Read campaign / targeting data"| store
+    ssp -->|"BidRequest"| dsp
+    dsp -->|"BidResponse / No-Bid"| ssp
+
+    advertiser -->|"Seed data"| store
+    dsp -->|"Read campaigns"| store

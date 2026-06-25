@@ -1,53 +1,53 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="650" viewBox="0 0 1120 650" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="620" viewBox="0 0 1120 620" role="img" aria-labelledby="title desc">
   <title id="title">C2 Container View</title>
-  <desc id="desc">RTB Bidding Application and Campaign Data Store inside the RTB Bidding System boundary.</desc>
+  <desc id="desc">C2 view showing Auction Client, Lightweight SSP, Lightweight DSP, Campaign Data Store, and Campaign Setup.</desc>
   <defs>
     <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
       <path d="M2,2 L10,6 L2,10 Z" fill="#334155"/>
     </marker>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.10"/>
+    <filter id="shadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#0f172a" flood-opacity="0.10"/>
     </filter>
   </defs>
-  <rect width="1120" height="650" fill="#f8fafc"/>
-  <text x="560" y="52" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700" fill="#0f172a">C2: Container View</text>
-  <text x="560" y="82" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#64748b">The hot path is kept inside one RTB application; campaign data is prepared from the advertiser side.</text>
 
-  <rect x="268" y="132" width="584" height="390" rx="24" fill="#eef6ff" stroke="#93c5fd" stroke-width="2"/>
-  <text x="560" y="166" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#1e3a8a">RTB Bidding System Boundary</text>
+  <rect width="1120" height="620" fill="#f8fafc"/>
+  <text x="560" y="54" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700" fill="#0f172a">C2: Container View</text>
 
-  <rect x="350" y="214" width="420" height="150" rx="18" fill="#1d4ed8" filter="url(#shadow)"/>
-  <text x="560" y="260" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#ffffff">RTB Bidding Application</text>
-  <text x="560" y="292" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#dbeafe">Lightweight SSP fan-out / Lightweight DSP decisioning</text>
-  <text x="560" y="314" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#dbeafe">BidResponse collection / Winner + price decision</text>
-  <text x="560" y="336" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#dbeafe">Metrics exposure</text>
+  <rect x="270" y="110" width="600" height="390" rx="16" fill="#eef6ff" stroke="#93c5fd" stroke-width="2"/>
+  <text x="570" y="144" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#1e3a8a">RTB Bidding System</text>
 
-  <rect x="408" y="418" width="304" height="72" rx="36" fill="#dcfce7" stroke="#86efac" stroke-width="2" filter="url(#shadow)"/>
-  <text x="560" y="450" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700" fill="#14532d">Campaign Data Store</text>
-  <text x="560" y="475" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" fill="#166534">Campaign and targeting test data</text>
+  <rect x="70" y="230" width="160" height="84" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
+  <text x="150" y="278" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#0f172a">Auction Client</text>
 
-  <rect x="56" y="218" width="230" height="132" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
-  <text x="171" y="260" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a">Publisher / Auction</text>
-  <text x="171" y="283" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a">Client + Test Runner</text>
-  <text x="171" y="316" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" fill="#64748b">OpenRTB traffic source</text>
+  <rect x="330" y="205" width="190" height="105" rx="12" fill="#1d4ed8" filter="url(#shadow)"/>
+  <text x="425" y="252" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#ffffff">Lightweight SSP</text>
+  <text x="425" y="278" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" fill="#dbeafe">Auction control</text>
 
-  <rect x="835" y="413" width="230" height="120" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
-  <text x="950" y="461" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#0f172a">Advertiser /</text>
-  <text x="950" y="485" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#0f172a">Campaign Setup</text>
-  <text x="950" y="515" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" fill="#64748b">Seed data setup</text>
+  <rect x="615" y="205" width="190" height="105" rx="12" fill="#0f766e" filter="url(#shadow)"/>
+  <text x="710" y="252" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#ffffff">Lightweight DSP</text>
+  <text x="710" y="278" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" fill="#ccfbf1">Bid decision</text>
 
-  <path d="M286 266 C310 266 322 266 344 266" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)"/>
-  <text x="318" y="242" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155">BidRequest</text>
+  <rect x="555" y="380" width="250" height="72" rx="14" fill="#dcfce7" stroke="#86efac" stroke-width="2" filter="url(#shadow)"/>
+  <text x="680" y="423" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#14532d">Campaign Data Store</text>
 
-  <path d="M350 322 C320 382 250 388 194 350" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)"/>
-  <text x="270" y="406" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155">Winner + Price / No-Winner</text>
+  <rect x="905" y="382" width="155" height="72" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
+  <text x="982" y="424" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="700" fill="#0f172a">Campaign Setup</text>
 
-  <path d="M560 364 L560 412" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)"/>
-  <text x="646" y="394" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155">Read data</text>
+  <path d="M230 258 L324 258" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+  <text x="277" y="242" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">BidRequest</text>
 
-  <path d="M835 473 C796 473 760 473 718 473" fill="none" stroke="#334155" stroke-width="2.5" marker-end="url(#arrow)"/>
-  <text x="776" y="449" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155">Seed data</text>
+  <path d="M330 292 C288 338 240 336 180 314" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+  <text x="255" y="354" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">AuctionResult</text>
 
-  <rect x="220" y="570" width="680" height="52" rx="12" fill="#e0f2fe" stroke="#7dd3fc"/>
-  <text x="560" y="602" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" fill="#075985">Container means a C4 execution boundary, not necessarily a Docker or Kubernetes container.</text>
+  <path d="M520 238 L609 238" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+  <text x="564" y="222" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">BidRequest</text>
+
+  <path d="M615 278 L526 278" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+  <text x="570" y="302" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">BidResponse / No-Bid</text>
+
+  <path d="M710 310 L694 374" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+  <text x="750" y="350" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">Read</text>
+
+  <path d="M905 418 L811 418" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+  <text x="858" y="402" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">Seed</text>
 </svg>

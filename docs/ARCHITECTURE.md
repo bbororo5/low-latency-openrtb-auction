@@ -143,24 +143,31 @@ flowchart LR
 
 ![C2 Container View](../assets/diagrams/c2-container-view.svg)
 
-`RTB Bidding Application`은 입찰 요청 처리부터 낙찰자/낙찰가 결정까지의 핵심 실행 경로를 담당한다.
+`Lightweight SSP`는 OpenRTB BidRequest를 받아 경량 DSP로 전달하고, BidResponse를 수집해 낙찰자와 낙찰가를 결정한다.
 
 주요 책임:
 
-- OpenRTB BidRequest 수신 및 검증
-- 등록된 여러 경량 DSP로 BidRequest 전달
-- 입찰 판단에 필요한 요청 정보 해석
-- 입찰 여부와 입찰가 판단
-- BidResponse 생성 및 수집
-- 잘못된 입찰 응답(invalid bid), 늦게 도착한 입찰 응답(late bid), 응답 시간 초과(timeout) 분류
+- BidRequest 수신 및 검증
+- 경량 DSP로 BidRequest 전달
+- BidResponse 수집
+- timeout, late bid, invalid bid 분류
 - 낙찰자/낙찰가 또는 낙찰 없음 결정
-- 응답 시간(latency), 응답 시간 초과(timeout), 잘못된 입찰 응답(invalid bid), 낙찰 없음(no-winner) 지표 노출
+
+`Lightweight DSP`는 BidRequest를 평가해 입찰 여부와 입찰가를 결정한다.
+
+주요 책임:
+
+- 광고 타입별 BidRequest 해석
+- 캠페인 후보 조회
+- bid 또는 no-bid 결정
+- 입찰가 산정
+- BidResponse 생성
 
 `Campaign Data Store`는 입찰 여부 판단에 필요한 광고 캠페인과 타겟팅 데이터를 제공한다.
 
 이 문서에서는 저장소의 구체적인 구현 기술을 확정하지 않는다. 데이터 적재 방식, 저장소 종류, 인메모리 캐시 전략은 Tech Spec 또는 ADR에서 결정한다.
 
-실제 OpenRTB 생태계에서 DSP는 광고 구매 측 외부 시스템이다. 이 프로젝트는 RTB 입찰 핵심 경로를 작게 검증하기 위해 DSP 역할을 `RTB Bidding Application` 내부 논리 책임으로 축소해서 다룬다.
+실제 OpenRTB 생태계에서 DSP는 광고 구매 측 외부 시스템이다. 이 프로젝트는 RTB 입찰 핵심 경로를 작게 검증하기 위해 경량 DSP를 시스템 내부 컨테이너로 둔다.
 
 어떤 DSP에 요청을 보낼지 고르는 라우팅 최적화는 다루지 않는다. 등록된 모든 경량 DSP에게 동일한 BidRequest를 전달하고, 각 경량 DSP는 서로 다른 설정과 캠페인 데이터로 bid, no-bid, timeout, invalid bid, late bid를 재현할 수 있다.
 
@@ -169,19 +176,23 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    tester["Publisher / Auction Client + Performance Test Runner"]
-    advertiser["Advertiser / Campaign Setup"]
+    client["Auction Client"]
+    advertiser["Campaign Setup"]
 
     subgraph boundary["RTB Bidding System"]
-        app["RTB Bidding Application"]
+        ssp["Lightweight SSP"]
+        dsp["Lightweight DSP"]
         store[("Campaign Data Store")]
     end
 
-    tester -->|"OpenRTB BidRequest / load test traffic"| app
-    app -->|"Winner + Auction Price / No-Winner Result"| tester
+    client -->|"BidRequest"| ssp
+    ssp -->|"AuctionResult"| client
 
-    advertiser -->|"Seed campaign / targeting data"| store
-    app -->|"Read campaign / targeting data"| store
+    ssp -->|"BidRequest"| dsp
+    dsp -->|"BidResponse / No-Bid"| ssp
+
+    advertiser -->|"Seed data"| store
+    dsp -->|"Read campaigns"| store
 ```
 
 </details>
