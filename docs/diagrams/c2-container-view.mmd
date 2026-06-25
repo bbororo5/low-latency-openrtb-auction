@@ -1,9 +1,11 @@
 flowchart TB
     client["Auction Client"]
+    advertiser["Campaign Setup"]
 
     subgraph boundary["RTB Bidding System"]
         ssp["Lightweight SSP Application"]
         dsp["Lightweight DSP Application"]
+        store[("Campaign Data Store")]
     end
 
     client -->|"BidRequest"| ssp
@@ -11,3 +13,6 @@ flowchart TB
 
     ssp -->|"BidRequest"| dsp
     dsp -->|"BidResponse / No-Bid"| ssp
+
+    advertiser -->|"Campaign data"| store
+    store -->|"Load snapshot"| dsp
