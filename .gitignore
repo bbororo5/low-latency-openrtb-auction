@@ -1,16 +1,9 @@
 .gradle/
 build/
 out/
-target/
+*.class
 
 .idea/
 *.iml
-.vscode/
 
 .DS_Store
-
-*.log
-
-node_modules/
-
-coverage/
