@@ -80,16 +80,28 @@ PRD가 무엇을 해결할지 정의하고, Architecture가 어떤 구조로 바
 
 | 흐름 | 계약 | 성격 |
 |---|---|---|
-| `Auction Client -> SSP` | `BidRequest` | OpenRTB 기반 외부 입력 |
-| `SSP -> DSP` | `AuctionRequest` | 검증/정규화된 내부 요청 |
-| `DSP -> SSP` | `BidResponse` 또는 `No-Bid` | OpenRTB 기반 입찰 응답 |
+| `Auction Client -> SSP` | 테스트용 경매 시작 요청 | 프로젝트 입력 |
+| `SSP -> DSP` | `BidRequest` | OpenRTB 표준 입찰 요청 |
+| `DSP -> SSP` | `BidResponse` 또는 `No-Bid` | OpenRTB 표준 입찰 응답 |
 | `SSP -> Auction Client` | `AuctionResult` | 프로젝트 검증용 결과 |
 
-`BidRequest`와 `BidResponse`는 OpenRTB 2.6 객체를 제한적으로 사용한다. `AuctionRequest`와 `AuctionResult`는 OpenRTB 표준 객체가 아니라, 구현 단순화와 테스트 검증을 위한 프로젝트 내부 계약이다.
+OpenRTB 표준 계약은 `SSP -> DSP`의 `BidRequest`와 `DSP -> SSP`의 `BidResponse`다. `Auction Client -> SSP`와 `SSP -> Auction Client`는 이 프로젝트를 실행하고 검증하기 위한 프로젝트 계약이다.
 
-### 2.2 Auction Client -> SSP: BidRequest
+### 2.2 Auction Client -> SSP: 테스트용 경매 시작 요청
 
-`BidRequest`는 외부에서 들어오는 입찰 요청이다. 경량 SSP는 이 요청을 먼저 검증하고, 처리 가능한 요청만 내부 `AuctionRequest`로 변환한다.
+OpenRTB 표준에서 `BidRequest`는 SSP가 DSP에게 보내는 입찰 요청이다. 이 프로젝트에서는 실제 게시자 서버나 광고 서버를 구현하지 않으므로, `Auction Client`가 경량 SSP에 경매 시작을 요청한다.
+
+테스트용 경매 시작 요청은 다음 역할만 가진다.
+
+- 테스트할 OpenRTB BidRequest payload를 제공한다.
+- 동일한 입력으로 기능 테스트와 부하 테스트를 반복할 수 있게 한다.
+- 경량 SSP가 경매를 시작할 수 있는 API 진입점이 된다.
+
+이 요청은 OpenRTB 표준 구간이 아니다. 경량 SSP는 이 입력에서 OpenRTB `BidRequest` payload를 읽고, DSP로 전달할 `BidRequest`를 구성한다.
+
+### 2.3 SSP -> DSP: BidRequest
+
+`BidRequest`는 경량 SSP가 경량 DSP에게 보내는 OpenRTB 표준 입찰 요청이다. 경량 SSP는 이 요청을 검증하고, 처리 가능한 요청만 경량 DSP에게 전달한다.
 
 지원하는 요청 형태:
 
@@ -133,35 +145,9 @@ PRD가 무엇을 해결할지 정의하고, Architecture가 어떤 구조로 바
 - `Native.request`가 JSON 문자열로 파싱되지 않으면 `INVALID_REQUEST`다.
 - `bidfloorcur`가 있고 `USD`가 아니면 `UNSUPPORTED_REQUEST`다.
 
-### 2.3 SSP -> DSP: AuctionRequest
-
-`AuctionRequest`는 경량 SSP가 BidRequest를 검증한 뒤 경량 DSP로 전달하는 내부 요청이다. DSP는 OpenRTB 원본 JSON을 다시 해석하지 않고, 정규화된 `AuctionRequest`를 기준으로 입찰 여부를 판단한다.
-
-| 필드 | 설명 |
-|---|---|
-| `requestId` | 원본 `BidRequest.id` |
-| `impId` | 원본 `Imp.id` |
-| `mediaType` | `BANNER`, `VIDEO`, `NATIVE` 중 하나 |
-| `bidFloor` | 최소 입찰가 |
-| `currency` | `USD` |
-| `deadlineAt` | SSP가 계산한 응답 마감 시각 |
-| `site` | 지면 정보. 없으면 비어 있는 값으로 처리 |
-| `device` | 디바이스/지역 정보. 없으면 비어 있는 값으로 처리 |
-| `mediaSpec` | 광고 타입별 정규화 정보 |
-
-`mediaSpec`은 광고 타입별로 달라진다.
-
-| `mediaType` | `mediaSpec` |
-|---|---|
-| `BANNER` | `width`, `height` |
-| `VIDEO` | `mimes`, `minDuration`, `maxDuration`, `protocols`, `width`, `height` |
-| `NATIVE` | parsed native request, `version` |
-
-이 변환의 목적은 SSP와 DSP 책임을 분리하는 것이다. OpenRTB 요청 형식 검증은 SSP가 담당하고, DSP는 정규화된 요청과 캠페인 데이터를 기준으로 입찰 판단에 집중한다.
-
 ### 2.4 DSP -> SSP: BidResponse / No-Bid
 
-경량 DSP는 `AuctionRequest`를 평가한 뒤 `BidResponse` 또는 `No-Bid`를 반환한다.
+경량 DSP는 `BidRequest`를 평가한 뒤 `BidResponse` 또는 `No-Bid`를 반환한다.
 
 정상 입찰 응답은 제한된 OpenRTB `BidResponse` 형태를 사용한다.
 
@@ -185,7 +171,7 @@ SSP의 BidResponse 검증 기준:
 
 - `BidResponse.id`는 원본 `BidRequest.id`와 같아야 한다.
 - `Bid.impid`는 원본 `Imp.id`와 같아야 한다.
-- `Bid.price`는 `bidFloor` 이상이어야 한다.
+- `Bid.price`는 원본 `Imp.bidfloor` 이상이어야 한다.
 - `cur`가 있으면 `USD`여야 한다.
 - `mtype`은 원본 요청의 광고 타입과 일치해야 한다.
 - 동영상/네이티브 응답은 `adm`을 가져야 한다.
