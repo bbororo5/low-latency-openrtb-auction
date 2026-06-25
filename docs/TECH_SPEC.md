@@ -468,11 +468,13 @@ Auction Flow는 Request Handler가 만든 내부 경매 요청을 받아 다음 
 경매 제한 시간은 다음 원칙으로 계산한다.
 
 ```text
-effectiveTimeout = min(request.tmax or defaultTimeout, systemMaxTimeout)
+mediaType = detectMediaType(request.imp)
+baseTimeout = request.tmax or defaultTimeout
+effectiveTimeout = applyMediaTypePolicy(baseTimeout, mediaType)
 deadline = receivedAt + effectiveTimeout
 ```
 
-`tmax`가 없으면 시스템 기본 timeout을 사용한다. `tmax`가 있더라도 시스템 상한보다 크면 상한값을 사용한다. 너무 작은 timeout의 보정/거절 기준은 성능 테스트 계획 또는 ADR에서 결정한다.
+`tmax`가 없으면 시스템 기본 timeout을 사용한다. 이후 광고 타입별 사용자 경험 영향을 고려해 timeout을 조정할 수 있다. 동영상 광고는 배너보다 더 엄격한 timeout 정책이 필요할 수 있다. 실제 timeout 값과 너무 작은 timeout의 보정/거절 기준은 성능 측정 결과를 바탕으로 조정한다.
 
 Auction Flow는 DSP 응답을 무기한 기다리지 않는다. deadline 이후 도착한 응답은 가격이 높더라도 낙찰 후보로 사용하지 않는다.
 
@@ -1022,17 +1024,13 @@ ADR로 남기는 기준:
 - 지금 확정하면 구현 범위가 불필요하게 커지거나, 아직 측정 근거가 부족하다.
 - 이후 구현/성능 테스트 결과를 바탕으로 더 나은 결정을 내릴 수 있다.
 
+ADR 후보는 구현 구조나 성능 특성을 바꿀 수 있는 항목으로 제한한다.
+
+남은 ADR 후보:
+
 | ADR 후보 | 결정해야 할 문제 | 지금 확정하지 않는 이유 | 판단 기준 |
 |---|---|---|---|
-| 캠페인 원본 데이터 보관 방식 | Campaign Data Store가 어떤 책임과 내구성을 가져야 하는가 | 현재 hot path는 시작 시점 Snapshot만 사용한다. 원본 저장 방식은 구현 편의보다 재시작 가능성, 테스트 재현성, 이후 갱신 전략과 함께 판단해야 한다. | 재시작 후 복구 가능성, fixture 관리 용이성, 테스트 재현성, 구현 복잡도 |
-| Campaign Snapshot 갱신 방식 | DSP 실행 중 캠페인 변경을 언제, 어떻게 반영할 것인가 | 현재 범위는 시작 시점 1회 로드다. 실행 중 갱신을 넣으면 버전 관리, 무중단 교체, 인스턴스 간 일관성 문제가 함께 생긴다. | hot path 영향, 갱신 지연 허용 범위, snapshot 교체 안정성, 구현 복잡도 |
 | Campaign Lookup 개선 방식 | 캠페인 수 증가 시 후보 캠페인을 어떻게 빠르게 줄일 것인가 | 초기 구현은 단순 순회가 가능하다. 실제 병목 여부는 캠페인 수를 늘린 성능 테스트 결과를 봐야 판단할 수 있다. | p95/p99 변화, 캠페인 수별 latency, 메모리 사용량, 구현 복잡도 |
-| 경매 제한 시간 정책 | `tmax`, 기본 timeout, 시스템 상한/하한을 어떻게 적용할 것인가 | 광고 타입과 테스트 환경에 따라 적절한 제한 시간이 달라질 수 있다. 너무 이른 확정은 성능 테스트 해석을 왜곡할 수 있다. | deadline compliance, timeout rate, 광고 타입별 latency, no-winner 변화 |
 | DSP 병렬 호출 방식 | 여러 DSP 호출을 어떤 동시성 모델로 처리할 것인가 | DSP 수, timeout 분포, 실행 환경에 따라 적절한 방식이 달라질 수 있다. 먼저 baseline을 측정해야 한다. | p95/p99, active threads, connection usage, timeout rate, 구현 단순성 |
-| BidRequest/BidResponse 변환 방식 | OpenRTB 객체를 내부 객체로 어디까지 정규화하고, 어디서 다시 응답 객체로 변환할 것인가 | 현재 원칙은 지원 필드만 정규화하는 것이다. 구현 과정에서 중복 mapping 비용과 경계 명확성 사이의 trade-off를 다시 볼 수 있다. | 책임 경계 명확성, parsing/mapping 비용, 테스트 용이성, 확장성 |
-| 낙찰가 계산 범위 | First Price만 유지할지, 다른 경매 방식을 지원할지 | 현재는 First Price만 지원한다. 추가 경매 방식은 floor price, tie-break, auctionPrice 계산 규칙을 넓히므로 별도 결정이 필요하다. | 구현 복잡도, OpenRTB 필드 활용도, 테스트 범위, 프로젝트 핵심성과의 관련성 |
-| no-bid 표현 방식 | 내부 `NO_BID`를 OpenRTB 응답으로 어떻게 표현할 것인가 | 현재는 내부 결과로 `NO_BID`를 사용하고, 필요한 테스트에서는 빈 `seatbid`를 허용한다. 외부 연동 수준을 어디까지 흉내낼지 결정이 필요하다. | OpenRTB 호환성, 테스트 단순성, SSP 처리 일관성 |
-| 성능 테스트 입력 데이터 구성 | 요청 payload, DSP 설정, 캠페인 데이터를 어떤 기준으로 fixture화할 것인가 | 성능 결과는 입력 데이터에 크게 좌우된다. 테스트 목적별로 고정 fixture와 변동 fixture를 분리해야 한다. | 재현성, 광고 타입 비율, 캠페인 수, no-bid/timeout/invalid 분포 |
-| 실행 환경과 배포 방식 | 성능 측정과 데모를 어떤 실행 환경에서 수행할 것인가 | 이 프로젝트는 운영 수준 배포 검증을 목표로 하지 않는다. 실행 환경은 성능 결과 해석 가능성과 구현 집중도를 기준으로 정해야 한다. | 로컬 재현성, 설정 단순성, 리소스 관찰 가능성, 포트폴리오 설명력 |
 
 이 문서에서 중요한 원칙은 결정을 미루는 것이 아니라, 근거 없이 앞당겨 확정하지 않는 것이다. 위 항목들은 구현과 측정이 진행되면서 ADR로 분리해 선택지, 결정, 결과를 기록한다.
