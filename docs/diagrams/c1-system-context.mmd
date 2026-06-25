@@ -1,11 +1,9 @@
 flowchart LR
     publisher["Auction Client"]
     advertiser["Campaign Setup"]
-    tester["Load Tester"]
     system["RTB Bidding System"]
 
     publisher -->|"BidRequest"| system
-    tester -->|"Load traffic"| system
     system -->|"AuctionResult"| publisher
 
     advertiser -->|"Campaign data"| system
