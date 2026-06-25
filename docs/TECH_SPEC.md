@@ -399,33 +399,353 @@ C3 컴포넌트 이름은 코드 파일명과 반드시 같을 필요는 없다.
 
 ### 5.1 SSP 책임 요약
 
+경량 SSP는 광고를 직접 고르지 않는다. 경량 SSP의 책임은 경매를 성립시키고, 제한 시간 안에 도착한 유효한 BidResponse만으로 낙찰 결과를 만드는 것이다.
+
+SSP 내부 협력 흐름:
+
+1. `Request Handler`가 테스트 요청에서 OpenRTB BidRequest를 읽고 내부 경매 요청으로 정규화한다.
+2. `Auction Flow`가 경매 deadline을 정하고 DSP 호출과 응답 수집을 조율한다.
+3. `DSP Gateway`가 경량 DSP에 BidRequest를 전달하고 응답 상태를 수집한다.
+4. `Bid Judge`가 응답을 bid, no-bid, timeout, late bid, invalid bid로 분류한다.
+5. `Winner Selector`가 유효한 bid 후보 중 낙찰자와 낙찰가를 결정한다.
+6. SSP는 AuctionResult를 만들어 Auction Client에 반환한다.
+
+SSP가 판단하는 것:
+
+- 요청이 경매를 시작할 수 있는 형식인지
+- 어떤 timeout/deadline을 적용할지
+- DSP 응답이 제한 시간 안에 도착했는지
+- DSP 응답이 원 요청과 일치하는 유효한 bid인지
+- 유효한 bid 중 누가 낙찰되는지
+
+SSP가 판단하지 않는 것:
+
+- 광고주 캠페인이 유저나 지면에 적합한지
+- DSP가 어떤 캠페인으로 입찰할지
+- DSP가 얼마로 입찰할지
+- 어떤 광고 소재를 응답에 포함할지
+
 ### 5.2 Request Handler
+
+`Request Handler`는 Auction Client 요청을 받고, OpenRTB BidRequest에서 이 시스템이 지원하는 필드만 검증/정규화한다.
+
+Request Handler는 원본 OpenRTB BidRequest 객체를 전체 SSP 흐름에 그대로 들고 다니지 않는다. 대신 지원 필드만 추출해 내부 경매 요청을 만든다. 이 결정은 지원 범위를 명확히 하고, 검증되지 않은 OpenRTB 필드가 다른 컴포넌트에서 우연히 사용되는 일을 막기 위한 것이다.
+
+내부 경매 요청:
+
+| 필드 | 필요성 | 없을 때 처리 |
+|---|---|---|
+| `requestId` | 원 요청 식별, BidResponse.id 검증, AuctionResult 추적에 사용 | `INVALID_REQUEST` |
+| `impId` | Bid.impid 검증과 AuctionResult 추적에 사용 | `INVALID_REQUEST` |
+| `mediaType` | 지원 광고 타입 판단, DSP 응답의 mtype 검증에 사용 | `INVALID_REQUEST` 또는 `UNSUPPORTED_REQUEST` |
+| `bidfloor` | 최소 입찰가 검증에 사용 | `0` |
+| `bidfloorcur` | 입찰가와 floor price 통화 비교에 사용 | `USD` |
+| `tmax` | 경매 제한 시간 계산에 사용 | 시스템 기본 timeout |
+| `auctionType` | 낙찰가 계산 방식 결정에 사용 | First Price |
+| `site` | DSP가 지면 조건을 판단할 때 사용할 수 있는 정보 | 없으면 빈 값 |
+| `device` | DSP가 디바이스/지역 조건을 판단할 때 사용할 수 있는 정보 | 없으면 빈 값 |
+| `mediaSpec` | banner/video/native 타입별 필수 조건 | 타입별 필수 필드가 없으면 `INVALID_REQUEST` |
+| `receivedAt` | deadline, elapsedMs, late bid 판단의 기준 시각 | 요청 수신 시 기록 |
+
+검증 기준은 2.3의 BidRequest 계약을 따른다. Request Handler는 경매 성립에 필요한 구조 검증까지만 담당하고, 캠페인 적합성 판단은 DSP에 남긴다.
+
+정규화된 내부 요청을 기준으로 DSP Gateway가 DSP에 보낼 OpenRTB BidRequest를 구성한다. 따라서 DSP로 전달되는 요청도 이 시스템이 지원한다고 명시한 범위 안에 머문다.
 
 ### 5.3 Auction Flow
 
+`Auction Flow`는 경매의 시간 경계와 전체 진행 순서를 책임진다.
+
+Auction Flow는 Request Handler가 만든 내부 경매 요청을 받아 다음 작업을 수행한다.
+
+- 경매 deadline 계산
+- 호출할 DSP 목록 결정
+- DSP Gateway 호출
+- DSP 응답 수집
+- Bid Judge 호출
+- Winner Selector 호출
+- AuctionResult 생성에 필요한 결과 조합
+
+경매 제한 시간은 다음 원칙으로 계산한다.
+
+```text
+effectiveTimeout = min(request.tmax or defaultTimeout, systemMaxTimeout)
+deadline = receivedAt + effectiveTimeout
+```
+
+`tmax`가 없으면 시스템 기본 timeout을 사용한다. `tmax`가 있더라도 시스템 상한보다 크면 상한값을 사용한다. 너무 작은 timeout의 보정/거절 기준은 성능 테스트 계획 또는 ADR에서 결정한다.
+
+Auction Flow는 DSP 응답을 무기한 기다리지 않는다. deadline 이후 도착한 응답은 가격이 높더라도 낙찰 후보로 사용하지 않는다.
+
 ### 5.4 DSP Gateway
+
+`DSP Gateway`는 경량 DSP 호출을 담당한다. Auction Flow가 지정한 DSP 목록과 deadline을 기준으로 각 DSP에 OpenRTB BidRequest를 전달한다.
+
+DSP Gateway는 응답을 다음 형태로 Auction Flow에 반환한다.
+
+| 상태 | 의미 |
+|---|---|
+| `BID_RECEIVED` | DSP가 BidResponse를 반환함. 아직 유효성 검증 전 상태 |
+| `NO_BID` | DSP가 정상적으로 입찰하지 않음 |
+| `TIMEOUT` | deadline 안에 응답하지 않음 |
+| `ERROR` | 호출 실패, 예외, 5xx 등 통신 또는 실행 오류 |
+| `LATE_RESPONSE` | deadline 이후 응답이 관찰됨 |
+
+`NO_BID`는 실패가 아니다. `TIMEOUT`, `ERROR`, `LATE_RESPONSE`는 해당 DSP의 응답 실패 또는 지연으로 기록하지만, 경매 전체 실패로 바로 처리하지 않는다.
+
+이 장에서는 HTTP client, thread model, retry 정책을 확정하지 않는다. 다만 DSP 호출은 경매 deadline 안에서 병렬로 수행되어야 한다.
 
 ### 5.5 Bid Judge
 
+`Bid Judge`는 DSP 응답이 낙찰 후보가 될 수 있는지 판단한다. Bid Judge는 낙찰자를 고르지 않는다.
+
+Bid Judge 입력:
+
+- 내부 경매 요청
+- DSP별 응답 상태
+- 응답 도착 시각
+- BidResponse payload
+- 경매 deadline
+
+Bid Judge 출력:
+
+- 유효한 bid 후보 목록
+- no-bid 수
+- timeout 수
+- late bid 수
+- invalid bid 수
+- invalid reason
+
+invalid bid 기준:
+
+| 기준 | 처리 |
+|---|---|
+| `BidResponse.id`가 원본 `requestId`와 다름 | `INVALID_BID` |
+| `Bid.impid`가 원본 `impId`와 다름 | `INVALID_BID` |
+| `Bid.price < bidfloor` | `INVALID_BID` |
+| 응답 통화가 `USD`가 아님 | `INVALID_BID` |
+| `Bid.mtype`이 요청 광고 타입과 다름 | `INVALID_BID` |
+| video/native 응답에 필요한 `adm`이 없음 | `INVALID_BID` |
+| deadline 이후 도착함 | `LATE_BID` |
+
+Bid Judge가 만든 유효 후보만 Winner Selector로 전달한다.
+
 ### 5.6 Winner Selector
 
+`Winner Selector`는 유효한 bid 후보 중 낙찰자와 낙찰가를 결정한다.
+
+이 프로젝트는 First Price Auction만 지원한다. `BidRequest.at`가 없으면 First Price로 처리하고, `at=1`만 지원한다. `at=2` Second Price Auction은 범위에서 제외하고 ADR 후보로 남긴다.
+
+First Price Auction 규칙:
+
+- 가장 높은 `Bid.price`를 제시한 bid가 낙찰된다.
+- `auctionPrice`는 `winningPrice`와 같다.
+- 유효한 bid 후보가 없으면 낙찰 없음이다.
+
+동일 가격이 여러 개일 때의 tie-break 규칙은 다음 순서로 적용한다.
+
+1. 먼저 도착한 BidResponse
+2. 그래도 같으면 DSP 식별자 사전순
+
+tie-break 규칙은 테스트 재현성을 위해 필요하다. 동일 입력에서 낙찰 결과가 매번 달라지면 기능 테스트와 성능 테스트 결과를 비교하기 어렵다.
+
 ### 5.7 SSP 처리 결과
+
+SSP는 경매가 끝나면 AuctionResult를 반환한다. AuctionResult는 OpenRTB 표준 객체가 아니라 테스트 클라이언트가 경매 결과를 검증하기 위한 프로젝트 응답이다.
+
+AuctionResult 상태:
+
+| 상태 | 의미 |
+|---|---|
+| `WINNER` | 유효한 bid 후보 중 낙찰자가 결정됨 |
+| `NO_WINNER` | 모든 DSP가 no-bid, timeout, error, late bid, invalid bid로 끝나 유효 후보가 없음 |
+| `INVALID_REQUEST` | 요청 구조가 잘못되어 경매를 시작할 수 없음 |
+| `UNSUPPORTED_REQUEST` | 요청은 구조적으로 유효하지만 이 시스템의 지원 범위를 벗어남 |
+
+AuctionResult에는 2.5에서 정의한 필드를 포함한다. 특히 `elapsedMs`와 `dspResultCounts`는 기능 검증뿐 아니라 timeout, late bid, invalid bid 원인 분석에도 사용한다.
 
 ## 6. 경량 DSP 설계
 
 ### 6.1 DSP 책임 요약
 
+경량 DSP는 SSP가 보낸 BidRequest를 보고, 자신의 Campaign Snapshot 기준으로 입찰할지 말지를 결정한다.
+
+DSP 내부 협력 흐름:
+
+1. `Bid Handler`가 BidRequest를 받고 입찰 판단에 필요한 요청 문맥을 만든다.
+2. `Campaign Lookup`이 Campaign Snapshot에서 후보 캠페인을 찾는다.
+3. `Matcher`가 요청과 캠페인 조건이 얼마나 잘 맞는지 평가한다.
+4. `Pricing`이 매칭 결과와 캠페인 입찰 조건을 바탕으로 최종 입찰가를 계산한다.
+5. `Bid Builder`가 BidResponse 또는 no-bid를 만든다.
+
+DSP가 판단하는 것:
+
+- 이 요청이 DSP가 처리할 수 있는 광고 타입인지
+- 이 요청에 맞는 캠페인 후보가 있는지
+- 후보 캠페인이 요청의 타겟 조건과 맞는지
+- 이 광고 기회가 캠페인에 얼마나 가치 있는지
+- SSP의 최소 입찰가 이상으로 입찰할 수 있는지
+
+DSP가 판단하지 않는 것:
+
+- 여러 DSP 중 누가 낙찰되는지
+- 최종 낙찰가가 얼마인지
+- 늦게 도착한 응답을 낙찰 후보로 쓸지
+- 전체 경매 결과를 어떻게 반환할지
+
 ### 6.2 Bid Handler
+
+`Bid Handler`는 SSP가 보낸 OpenRTB BidRequest를 받고 DSP 내부 입찰 판단에 필요한 `BidContext`를 만든다.
+
+DSP는 SSP가 이미 검증한 요청을 받더라도 최소 검증을 수행한다. DSP는 독립 컴포넌트이며, 잘못된 요청이 캠페인 매칭이나 가격 산정까지 흘러 들어가면 원인 분석이 어려워지기 때문이다.
+
+BidContext:
+
+| 필드 | 필요성 |
+|---|---|
+| `requestId` | BidResponse.id로 사용 |
+| `impId` | Bid.impid로 사용 |
+| `mediaType` | 후보 캠페인 조회와 응답 mtype 결정에 사용 |
+| `bidfloor` | 최소 입찰가 이상으로 입찰 가능한지 판단 |
+| `bidfloorcur` | 통화 검증에 사용. 이 프로젝트는 `USD`만 지원 |
+| `site` | 지면 카테고리 또는 도메인 조건 판단에 사용 |
+| `device` | 국가, 지역, 디바이스 조건 판단에 사용 |
+| `mediaSpec` | 배너 크기, 동영상 길이, 네이티브 요청 조건 판단에 사용 |
+
+Bid Handler는 지원하지 않는 광고 타입, 필수 필드 누락, 지원하지 않는 통화를 발견하면 입찰 판단을 중단한다. 이 경우 DSP는 bid를 만들지 않는다.
 
 ### 6.3 Campaign Lookup
 
+`Campaign Lookup`은 시작 시점에 로드된 Campaign Snapshot에서 후보 캠페인을 찾는다.
+
+Campaign Lookup은 Campaign Data Store를 직접 조회하지 않는다. BidRequest 처리 중에는 DSP 내부 메모리에 있는 Snapshot만 사용한다.
+
+초기 후보 축소 기준:
+
+- 캠페인이 활성 상태인지
+- 캠페인의 광고 타입이 요청 광고 타입과 같은지
+- 캠페인이 이 DSP에 속하는지
+
+초기 구현은 단순 순회가 될 수 있다. 다만 Campaign Lookup의 책임은 성능 테스트 결과에 따라 광고 타입, 배너 크기, 국가 같은 조건 기반 인덱스로 개선될 수 있도록 분리한다.
+
+Campaign Lookup은 최종 입찰 가능 여부를 판단하지 않는다. 후보 캠페인을 줄이고, 세부 타겟 판단은 Matcher에 넘긴다.
+
 ### 6.4 Matcher
+
+`Matcher`는 BidContext와 후보 캠페인을 비교해 실제 입찰 가능한 캠페인을 고른다.
+
+Matcher가 평가하는 조건:
+
+| 조건 | 설명 |
+|---|---|
+| 광고 타입 | 요청의 `banner`, `video`, `native`와 캠페인 광고 타입이 맞는지 |
+| 배너 크기 | banner 요청의 `w`, `h`가 캠페인 지원 크기와 맞는지 |
+| 동영상 조건 | video 요청의 MIME, 재생 시간, protocol이 캠페인 조건과 맞는지 |
+| 네이티브 조건 | native 요청을 캠페인이 처리할 수 있는지 |
+| 지역/국가 | device 또는 geo 정보가 캠페인 타겟과 맞는지 |
+| 디바이스 | 모바일/데스크톱, OS 같은 조건이 맞는지 |
+| 지면 | site category 또는 domain 조건이 맞는지 |
+
+Matcher는 단순히 통과/탈락만 만들지 않는다. 요청이 캠페인과 얼마나 잘 맞는지 `matchScore`를 함께 만든다.
+
+`matchScore`는 복잡한 예측 모델이 아니다. 이 프로젝트에서는 다음 의미만 가진다.
+
+- 잘 맞는 요청이면 기본 입찰가보다 조금 높게 입찰할 수 있다.
+- 보통이면 기본 입찰가 수준으로 입찰한다.
+- 덜 맞으면 낮게 입찰하거나 no-bid가 될 수 있다.
+
+예시:
+
+| 매칭 정도 | 의미 |
+|---|---|
+| 높음 | 캠페인 타겟과 여러 조건이 잘 맞음 |
+| 보통 | 필수 조건은 맞지만 추가 가점은 적음 |
+| 낮음 | 필수 조건은 맞지만 캠페인 가치가 낮음 |
+
+필수 조건이 맞지 않으면 해당 캠페인은 탈락한다.
 
 ### 6.5 Pricing
 
+`Pricing`은 Matcher가 남긴 캠페인에 대해 최종 입찰가를 계산한다.
+
+이 프로젝트의 Pricing은 실제 DSP의 예측 입찰 모델을 구현하지 않는다. 대신 캠페인의 기본 가격과 요청-캠페인 매칭 정도를 사용해, 같은 BidRequest라도 캠페인마다 다른 입찰가가 나올 수 있도록 한다.
+
+가격 산정 원칙:
+
+1. 캠페인마다 기본 입찰가를 가진다.
+2. 요청이 캠페인 조건에 잘 맞으면 기본 입찰가보다 조금 높게 입찰한다.
+3. 요청이 덜 맞으면 기본 입찰가보다 낮게 입찰한다.
+4. 광고주가 허용한 최대 입찰가를 넘지 않는다.
+5. SSP가 요구한 최소 입찰가보다 낮으면 no-bid로 처리한다.
+
+예시:
+
+| 상황 | 기본 입찰가 | 매칭 정도 | 계산된 입찰가 | SSP 최소 입찰가 | 결과 |
+|---|---:|---|---:|---:|---|
+| 잘 맞음 | 100 | 높음 | 120 | 90 | bid |
+| 보통 | 100 | 보통 | 100 | 90 | bid |
+| 덜 맞음 | 100 | 낮음 | 80 | 90 | no-bid |
+
+광고주 최대 입찰가 예시:
+
+| 기본 입찰가 | 매칭 정도 | 계산된 입찰가 | 광고주 최대 입찰가 | 실제 입찰가 |
+|---:|---|---:|---:|---:|
+| 100 | 매우 높음 | 180 | 150 | 150 |
+
+이 규칙은 “같은 광고 기회도 광고주나 캠페인에 따라 가치가 다를 수 있다”는 DSP의 기본 사고를 단순한 형태로 표현하기 위한 것이다.
+
+제외하는 가격 정책:
+
+- 예산 소진에 따른 입찰가 조정
+- pacing
+- 빈도 제한
+- CTR/CVR 예측 모델
+- 사용자 가치 기반 ML 입찰
+- Second Price 대응
+
 ### 6.6 Bid Builder
 
+`Bid Builder`는 Pricing 결과를 OpenRTB BidResponse 또는 no-bid로 변환한다.
+
+BidResponse 생성 규칙:
+
+| 필드 | 값 |
+|---|---|
+| `BidResponse.id` | 원본 `BidRequest.id` |
+| `BidResponse.cur` | `USD` |
+| `SeatBid.seat` | DSP 또는 광고주 seat 식별자 |
+| `Bid.id` | DSP가 생성한 bid 식별자 |
+| `Bid.impid` | 원본 `Imp.id` |
+| `Bid.price` | Pricing이 계산한 입찰가 |
+| `Bid.cid` | 캠페인 식별자 |
+| `Bid.crid` | 광고 소재 식별자 |
+| `Bid.adomain` | 광고주 도메인 |
+| `Bid.mtype` | 요청 광고 타입에 맞는 OpenRTB mtype |
+| `Bid.adm` | 테스트용 mock markup 또는 creative reference |
+
+`adm`은 실제 광고 렌더링을 위한 완성 마크업이 아니다. 이 프로젝트에서는 BidResponse 형식을 성립시키기 위한 최소 creative 참조로 제한한다.
+
+no-bid 생성 조건:
+
+- 지원하지 않는 요청이다.
+- 후보 캠페인이 없다.
+- 타겟 조건을 만족하는 캠페인이 없다.
+- 계산된 입찰가가 bidfloor보다 낮다.
+- BidResponse를 만들 수 있는 creative 정보가 없다.
+
+no-bid는 DSP의 정상 응답이다. SSP는 no-bid를 경매 전체 실패로 보지 않는다.
+
 ### 6.7 DSP 처리 결과
+
+DSP는 요청 처리 결과를 다음 중 하나로 반환한다.
+
+| 결과 | 의미 |
+|---|---|
+| `BID` | BidResponse를 반환함 |
+| `NO_BID` | 정상적으로 입찰하지 않음 |
+| `INVALID_REQUEST` | DSP가 처리할 수 없는 잘못된 요청 |
+| `ERROR` | DSP 내부 처리 중 예외 발생 |
+
+SSP 관점에서는 `BID`만 낙찰 후보가 될 수 있다. `NO_BID`는 정상 결과이며, `INVALID_REQUEST`와 `ERROR`는 해당 DSP의 실패로 기록한다.
 
 ## 7. 공통 실패 처리
 
