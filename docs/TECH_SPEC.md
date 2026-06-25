@@ -391,7 +391,31 @@ flowchart LR
 
 ### 4.5 C3 경계 원칙
 
-C3 컴포넌트 이름은 코드 파일명과 반드시 같을 필요는 없다. 이 이름들은 구현자가 책임을 나누기 위한 기준이다.
+C3 컴포넌트 이름은 코드 파일명과 반드시 같을 필요는 없다. 다만 이 프로젝트에서는 C3 컴포넌트 경계를 테스트로 검증하기 위해 주요 컴포넌트를 패키지 경계로 드러낸다.
+
+경량 SSP 패키지 대응:
+
+| C3 컴포넌트 | 코드 패키지 | 경계 의미 |
+|---|---|---|
+| `Request Handler` | `com.bbororo.rtb.ssp.request` | OpenRTB 요청을 내부 경매 요청으로 정규화한다. |
+| `Auction Flow` | `com.bbororo.rtb.ssp.auction` | deadline 계산, DSP 호출, 응답 수집, 판단 흐름을 조율한다. |
+| `DSP Gateway` | `com.bbororo.rtb.ssp.dsp` | DSP 호출 결과를 SSP 내부 결과로 표현한다. |
+| `Bid Judge` | `com.bbororo.rtb.ssp.judge` | DSP 응답을 낙찰 후보로 사용할 수 있는지 분류한다. |
+| `Winner Selector` | `com.bbororo.rtb.ssp.winner` | 유효한 bid 후보 중 낙찰자와 낙찰가를 결정한다. |
+| 외부 입출력 | `com.bbororo.rtb.ssp.adapter..` | HTTP, config, 외부 DSP client 같은 기술 경계를 둔다. |
+
+경량 DSP 패키지 대응:
+
+| C3 컴포넌트 | 코드 패키지 | 경계 의미 |
+|---|---|---|
+| `Bid Handler` | `com.bbororo.rtb.dsp.bid` | SSP 요청을 DSP 내부 입찰 판단 문맥으로 만든다. |
+| `Campaign Lookup` | `com.bbororo.rtb.dsp.campaign` | Campaign Snapshot에서 후보 캠페인을 찾는다. |
+| `Matcher` | `com.bbororo.rtb.dsp.match` | BidRequest와 캠페인의 타겟 조건을 평가한다. |
+| `Pricing` | `com.bbororo.rtb.dsp.price` | 입찰 가능 가격을 산정한다. |
+| `Bid Builder` | `com.bbororo.rtb.dsp.response` | BidResponse 또는 no-bid 결과를 만든다. |
+| 외부 입출력 | `com.bbororo.rtb.dsp.adapter..` | HTTP, config, campaign store loader 같은 기술 경계를 둔다. |
+
+기존 `domain/application/adapter` 중심 패키지는 사용하지 않는다. 대신 C3 컴포넌트를 코드 패키지로 드러내고, `adapter`는 외부 입출력 기술 경계로만 유지한다.
 
 세부 클래스, 메서드, 자료구조는 5장 경량 SSP 설계와 6장 경량 DSP 설계에서 구체화한다. 성능 지표와 부하 테스트 기준은 8장에서 다룬다.
 
@@ -934,6 +958,17 @@ AuctionResult에는 `NO_WINNER` 상태와 함께 `dspResultCounts`를 포함해 
 | Unit test | 판단 로직을 리팩토링하거나 최적화할 때 | Bid Judge, Winner Selector, Matcher, Pricing 같은 핵심 규칙 회귀 방지 |
 | Integration test | 컴포넌트 경계나 계약을 바꿀 때 | SSP 내부 협력, DSP 내부 협력, SSP-DSP 계약 검증 |
 | Performance test | baseline 측정과 최적화 전후 비교 시 | p95/p99, deadline compliance, 상태별 결과 분포 비교 |
+
+이 프로젝트의 테스트 가드레일은 C2와 C3 레벨을 구분한다.
+
+| 구분 | 테스트 대상 | 목적 |
+|---|---|---|
+| C2 architecture test | `shared`, `ssp-app`, `dsp-app` 모듈 의존 방향 | SSP/DSP 컨테이너 경계를 코드 의존성으로 무너뜨리지 않게 한다. |
+| C3 architecture test | SSP/DSP 내부 C3 컴포넌트 패키지 의존 방향 | C3 다이어그램의 협력 방향을 코드 패키지 경계로 검증한다. |
+| C2 contract test | SSP-DSP OpenRTB 요청/응답, Campaign Snapshot | 컨테이너 사이에 오가는 데이터 계약을 검증한다. |
+| C3 contract test | 컨테이너 내부 컴포넌트 간 입력/출력 | Request Handler, Auction Flow, Bid Judge 같은 내부 컴포넌트 협력 계약을 검증한다. |
+
+Architecture test는 패키지 의존성을 검증한다. Contract test는 컴포넌트 사이에 오가는 입력과 출력의 의미를 검증한다. 둘은 같은 경계를 다루더라도 목적이 다르므로 분리해서 작성한다.
 
 예시:
 
