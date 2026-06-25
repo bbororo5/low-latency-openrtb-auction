@@ -326,27 +326,31 @@ PRD는 다음 가정을 둔다.
 
 주요 의사결정과 trade-off를 기록한다.
 
-`M6: Core Bid Flow`
+`M6: Contract and Test Fixture Setup`
 
-BidRequest 수신, BidRequest fan-out, 입찰 여부와 입찰가 판단, BidResponse 생성 흐름을 구현한다.
+OpenRTB 요청/응답 DTO, 지원 필드 검증 규칙, 예시 BidRequest, 예시 BidResponse, 테스트용 캠페인 데이터를 준비한다.
 
-`M7: Auction Flow`
+`M7: Lightweight DSP Flow`
 
-여러 경량 DSP 응답 수집, timeout 처리, 낙찰자와 낙찰가 결정을 구현한다.
+경량 DSP의 광고 타입별 요청 해석, 캠페인 매칭, bid/no-bid 결정, 입찰가 산정, BidResponse 생성을 구현한다.
 
-`M8: Failure Case Handling`
+`M8: Lightweight SSP Auction Flow`
+
+경량 SSP의 BidRequest 수신, 여러 경량 DSP 호출, 응답 수집, timeout 처리, 낙찰자와 낙찰가 결정을 구현한다.
+
+`M9: Failure Case Handling`
 
 no-bid, timeout, invalid bid, late bid, no-winner 시나리오를 구현한다.
 
-`M9: Performance Measurement`
+`M10: Performance Measurement`
 
 로컬 통제 환경에서 응답 시간(latency), 제한 시간 내 응답률(deadline compliance), 관찰된 처리량(observed throughput)을 측정한다.
 
-`M10: Optimization`
+`M11: Optimization`
 
 측정 결과를 바탕으로 병목을 개선한다.
 
-`M11: Retrospective`
+`M12: Retrospective`
 
 구현 결과, 성능 결과, 설계 trade-off, 배운 점을 정리한다.
 
