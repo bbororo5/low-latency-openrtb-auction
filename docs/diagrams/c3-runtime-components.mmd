@@ -1,0 +1,33 @@
+flowchart LR
+    client["Auction Client"]
+
+    subgraph ssp["Lightweight SSP Application"]
+        sspRequest["Request Handler"]
+        auctionFlow["Auction Flow"]
+        dspGateway["DSP Gateway"]
+        bidJudge["Bid Judge"]
+        winner["Winner Selector"]
+    end
+
+    subgraph dsp["Lightweight DSP Application"]
+        bidHandler["Bid Handler"]
+        campaignLookup["Campaign Lookup"]
+        matcher["Matcher"]
+        pricing["Pricing"]
+        bidBuilder["Bid Builder"]
+    end
+
+    client -->|"BidRequest"| sspRequest
+    sspRequest --> auctionFlow
+    auctionFlow --> dspGateway
+    dspGateway -->|"BidRequest"| bidHandler
+
+    bidHandler --> campaignLookup
+    campaignLookup --> matcher
+    matcher --> pricing
+    pricing --> bidBuilder
+
+    bidBuilder -->|"BidResponse / No-Bid"| dspGateway
+    dspGateway --> bidJudge
+    bidJudge --> winner
+    winner -->|"AuctionResult"| client
