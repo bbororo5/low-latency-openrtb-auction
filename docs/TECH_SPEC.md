@@ -851,10 +851,164 @@ AuctionResult에는 `NO_WINNER` 상태와 함께 `dspResultCounts`를 포함해 
 
 ## 8. 성능 지표와 테스트 전략
 
-### 8.1 측정 지표
+이 장은 RTB hot path가 제한 시간 안에 올바른 경매 결과를 반환하는지 확인하기 위한 측정 지표, 테스트 시나리오, 결과 해석 기준을 정의한다.
 
-### 8.2 기능 테스트 시나리오
+테스트 대상은 BidRequest 수신부터 AuctionResult 반환까지다. 광고 렌더링, 노출/클릭/전환 추적, 과금, 리포팅은 테스트 범위에 포함하지 않는다.
 
-### 8.3 부하 테스트 시나리오
+### 8.1 측정 원칙
+
+성능 테스트는 절대 RPS 목표를 먼저 약속하지 않는다. 실행 환경에 따라 처리량은 달라지므로, 성능 결과에는 실행 환경과 테스트 조건을 함께 기록한다.
+
+측정 원칙:
+
+- 평균 응답 시간보다 p95/p99 latency를 우선 본다.
+- 처리량보다 deadline 안에 결과를 반환한 비율을 우선 본다.
+- baseline과 개선 후 결과를 같은 조건에서 비교한다.
+- 빠르지만 timeout, invalid bid, no-winner가 증가한 결과는 성공으로 보지 않는다.
+- `NO_BID`, `NO_WINNER`, `TIMEOUT`, `LATE_BID`, `INVALID_BID`, `ERROR`를 하나의 실패로 묶지 않는다.
+- 캠페인 수, DSP 수, 동시 요청 수 변화가 latency와 deadline 준수율에 미치는 영향을 따로 본다.
+
+성능 결과에 함께 기록할 조건:
+
+- 실행 머신 사양
+- Java/JVM 설정
+- SSP/DSP 실행 방식
+- DSP 수
+- 캠페인 수
+- 요청 수와 동시성 수준
+- 광고 타입 비율
+- timeout 설정
+
+### 8.2 성능 지표
+
+핵심 지표:
+
+| 지표 | 의미 |
+|---|---|
+| `latency p50/p95/p99` | Auction Client 요청 수신부터 AuctionResult 반환까지의 응답 시간 분포 |
+| `deadline compliance` | 제한 시간 안에 경매 결과를 반환한 비율 |
+| `observed throughput` | 테스트 환경에서 관찰된 초당 처리 요청 수 |
+| `winner rate` | 전체 요청 중 낙찰자가 결정된 비율 |
+| `no-winner rate` | 유효 bid 후보가 없어 낙찰자가 없었던 비율 |
+
+원인 분석 지표:
+
+| 지표 | 의미 |
+|---|---|
+| `no-bid count/rate` | DSP가 정상적으로 입찰하지 않은 수와 비율 |
+| `timeout count/rate` | DSP가 제한 시간 안에 응답하지 못한 수와 비율 |
+| `late bid count` | 제한 시간 이후 도착해 제외된 bid 수 |
+| `invalid bid count/rate` | BidResponse 검증 실패 수와 비율 |
+| `error count/rate` | DSP 호출 실패 또는 내부 예외 수와 비율 |
+
+진단 지표:
+
+| 지표 | 의미 |
+|---|---|
+| CPU usage | 부하 증가 시 CPU 병목 여부 확인 |
+| memory usage | Campaign Snapshot과 요청 처리 중 메모리 사용량 확인 |
+| active threads | DSP fan-out과 동시 요청 처리 시 스레드 사용량 확인 |
+| connection usage | SSP-DSP 호출 시 연결 사용량 확인 |
+| GC pause | 지연 시간 급증이 GC와 관련 있는지 확인 |
+
+### 8.3 검증과 최적화 사이클
+
+이 프로젝트의 개발 흐름은 테스트 계층을 먼저 완성하는 방식이 아니다. 먼저 동작하는 RTB hot path를 만들고, 측정 결과를 바탕으로 리팩토링과 최적화를 반복하며, 변경된 영역의 회귀 위험에 맞춰 테스트를 보강한다.
+
+기본 사이클:
+
+1. E2E smoke test로 BidRequest부터 AuctionResult까지의 hot path baseline을 만든다.
+2. 같은 조건에서 p95/p99 latency, deadline compliance, 상태별 결과 분포를 측정한다.
+3. 측정 결과를 바탕으로 병목 후보를 정한다.
+4. 병목 개선을 위해 리팩토링 또는 최적화를 수행한다.
+5. 변경된 영역의 회귀 위험에 맞춰 unit test 또는 integration test를 추가한다.
+6. 같은 조건에서 재측정해 성능 개선과 경매 결과 품질 보존을 함께 확인한다.
+
+테스트 계층의 역할:
+
+| 테스트 | 적용 시점 | 목적 |
+|---|---|---|
+| E2E smoke test | hot path를 처음 세울 때 | 전체 경매 흐름이 끝까지 동작하는지 확인 |
+| Unit test | 판단 로직을 리팩토링하거나 최적화할 때 | Bid Judge, Winner Selector, Matcher, Pricing 같은 핵심 규칙 회귀 방지 |
+| Integration test | 컴포넌트 경계나 계약을 바꿀 때 | SSP 내부 협력, DSP 내부 협력, SSP-DSP 계약 검증 |
+| Performance test | baseline 측정과 최적화 전후 비교 시 | p95/p99, deadline compliance, 상태별 결과 분포 비교 |
+
+예시:
+
+| 관찰 또는 변경 | 보강할 테스트 |
+|---|---|
+| Campaign Lookup 인덱스 도입 | 기존 단순 조회와 같은 후보를 반환하는지 unit/integration test 추가 |
+| Winner Selector 변경 | 최고가 낙찰, 동일 가격 tie-break, 후보 없음 unit test 추가 |
+| Bid Judge 최적화 | invalid bid, late bid, bidfloor 미만 분류 unit test 추가 |
+| DSP fan-out 방식 변경 | timeout, late bid, 일부 DSP 실패 integration test 추가 |
+| Pricing 규칙 변경 | 매칭 정도별 가격 계산과 bidfloor 미만 no-bid unit test 추가 |
+
+이 방식의 목적은 테스트를 위한 테스트를 늘리는 것이 아니다. 성능 개선 과정에서 깨지면 안 되는 경매 규칙을 점진적으로 고정하는 것이다.
+
+### 8.4 기능 테스트 시나리오
+
+기능 테스트는 2장의 계약, 5장의 SSP 설계, 6장의 DSP 설계, 7장의 상태 분류가 기대대로 연결되는지 확인한다.
+
+| 시나리오 | 기대 결과 |
+|---|---|
+| 하나의 DSP가 유효한 BidResponse 반환 | `WINNER` |
+| 여러 DSP가 유효한 BidResponse 반환 | 가장 높은 가격의 bid가 낙찰 |
+| 동일 가격 BidResponse 여러 개 반환 | tie-break 규칙 적용 |
+| 모든 DSP가 `NO_BID` 반환 | `NO_WINNER` |
+| 일부 DSP는 `TIMEOUT`, 일부 DSP는 유효 bid 반환 | 유효 bid 중 낙찰 |
+| 가장 높은 bid가 deadline 이후 도착 | `LATE_BID`로 제외 |
+| `Bid.price < bidfloor` | `INVALID_BID`로 제외 |
+| `Bid.impid`가 원본 `Imp.id`와 다름 | `INVALID_BID`로 제외 |
+| 지원하지 않는 광고 타입 요청 | `UNSUPPORTED_REQUEST` |
+| 필수 필드 누락 요청 | `INVALID_REQUEST` |
+| 캠페인 후보 없음 | DSP `NO_BID` |
+| 계산된 입찰가가 bidfloor보다 낮음 | DSP `NO_BID` |
+
+각 테스트는 AuctionResult의 `status`, `winnerDspId`, `auctionPrice`, `dspResultCounts`를 검증한다.
+
+### 8.5 부하 테스트 시나리오
+
+부하 테스트는 시스템의 절대 성능을 과장하기 위한 것이 아니라, 어떤 조건에서 latency와 deadline 준수율이 흔들리는지 확인하기 위한 것이다.
+
+테스트 축:
+
+| 축 | 관찰 목적 |
+|---|---|
+| 동시 요청 수 증가 | SSP 요청 처리와 DSP fan-out이 p95/p99에 미치는 영향 |
+| DSP 수 증가 | 호출 대상 증가가 응답 수집 시간과 timeout 비율에 미치는 영향 |
+| 캠페인 수 증가 | Campaign Lookup이 p95/p99에 미치는 영향 |
+| 광고 타입 혼합 | banner/video/native 요청 처리 차이 확인 |
+| no-bid 비율 증가 | 정상 비입찰이 no-winner와 결과 분포에 미치는 영향 |
+| timeout DSP 포함 | 일부 DSP 지연이 전체 경매에 미치는 영향 |
+| invalid bid 포함 | Bid Judge 검증과 제외 처리가 안정적인지 확인 |
+
+기본 부하 테스트는 같은 입력 조건에서 반복 가능해야 한다. 요청 payload, DSP 설정, 캠페인 데이터는 테스트 fixture로 고정한다.
+
+Campaign Lookup은 초기 구현에서 단순 순회가 될 수 있다. 캠페인 수 증가에 따라 p95/p99가 급격히 악화되면 광고 타입, 크기, 국가 같은 조건 기반 인덱스 개선 후보로 기록한다.
+
+### 8.6 결과 해석 기준
+
+성능 결과는 latency 숫자만으로 판단하지 않는다. 경매 결과의 품질과 상태 분류를 함께 해석한다.
+
+해석 기준:
+
+| 관찰 결과 | 해석 |
+|---|---|
+| p99가 낮지만 `NO_WINNER`가 증가 | 빠르지만 유효 bid를 얻지 못하는 방향일 수 있음 |
+| 처리량은 증가했지만 timeout rate가 증가 | DSP 호출 또는 deadline 정책 병목 가능성 |
+| invalid bid rate가 증가 | DSP BidResponse 생성 또는 SSP 검증 규칙 불일치 가능성 |
+| 캠페인 수 증가에 따라 p95/p99 급증 | Campaign Lookup 개선 후보 |
+| DSP 수 증가에 따라 p99 급증 | DSP fan-out, 응답 수집, thread/connection 사용량 점검 필요 |
+| `NO_BID` 증가 | 캠페인 데이터, 타겟 조건, Pricing 규칙 점검 필요 |
+
+성능 개선은 다음 형식으로 비교한다.
+
+```text
+같은 테스트 조건에서
+baseline -> 변경 후
+latency p95/p99, deadline compliance, timeout rate, no-winner rate를 비교한다.
+```
+
+개선으로 인정하려면 latency가 낮아지거나 deadline compliance가 올라가야 하며, 동시에 invalid bid, timeout, no-winner 같은 품질 지표가 악화되지 않아야 한다.
 
 ## 9. Deferred Decisions & ADR Candidates
