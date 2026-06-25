@@ -176,9 +176,18 @@ BidResponse는 다음 기준으로 검증한다.
 
 HTTP 204 방식의 no-bid는 실제 외부 DSP 연동을 하지 않으므로 다루지 않는다.
 
-### 2.3 경매 결과 응답
+### 2.3 AuctionResult: 프로젝트 검증용 응답
 
-이 시스템은 경량 DSP의 `BidResponse`를 그대로 외부 호출자에게 반환하지 않는다. 여러 경량 DSP 응답을 수집한 뒤, 프로젝트 전용 `AuctionResult`를 반환한다.
+OpenRTB 표준에서 경량 DSP가 경량 SSP에 반환하는 응답은 `BidResponse`다. `AuctionResult`는 OpenRTB 표준 객체가 아니다.
+
+이 프로젝트에서는 경량 SSP가 여러 경량 DSP의 `BidResponse`를 수집하고 낙찰자와 낙찰가를 결정한 뒤, 테스트 클라이언트가 그 결과를 확인할 수 있도록 프로젝트 전용 `AuctionResult`를 반환한다.
+
+따라서 표준 계약과 프로젝트 검증용 응답은 다음처럼 구분한다.
+
+| 구분 | 객체 | 설명 |
+|---|---|---|
+| OpenRTB 표준 응답 | `BidResponse` | 경량 DSP가 경량 SSP에게 반환하는 입찰 응답 |
+| 프로젝트 검증용 응답 | `AuctionResult` | 경량 SSP가 테스트 클라이언트에게 반환하는 경매 결과 |
 
 `AuctionResult`는 테스트와 성능 측정을 위해 다음 정보를 포함한다.
 
@@ -196,7 +205,7 @@ HTTP 204 방식의 no-bid는 실제 외부 DSP 연동을 하지 않으므로 다
 | `elapsedMs` | 요청 처리 시작부터 결과 결정까지 걸린 시간 |
 | `dspResultCounts` | bid, no-bid, timeout, late bid, invalid bid 개수 |
 
-`AuctionResult`는 OpenRTB 표준 객체가 아니다. 이 프로젝트가 경량 SSP와 경량 DSP의 핵심 흐름을 함께 구현하기 때문에, 최종 결과를 검증하기 위한 테스트 응답 객체로 둔다.
+실제 OpenRTB 연동에서는 SSP가 낙찰 이후 광고 전달, win notice, billing notice 같은 후속 흐름을 처리할 수 있다. 이 프로젝트는 광고 렌더링과 notice 호출을 범위에 포함하지 않으므로, 낙찰 결과 확인을 `AuctionResult`로 마무리한다.
 
 ## 3. Runtime Flow
 
