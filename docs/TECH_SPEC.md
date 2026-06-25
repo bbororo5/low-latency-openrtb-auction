@@ -488,9 +488,9 @@ DSP Gateway는 응답을 다음 형태로 Auction Flow에 반환한다.
 | `NO_BID` | DSP가 정상적으로 입찰하지 않음 |
 | `TIMEOUT` | deadline 안에 응답하지 않음 |
 | `ERROR` | 호출 실패, 예외, 5xx 등 통신 또는 실행 오류 |
-| `LATE_RESPONSE` | deadline 이후 응답이 관찰됨 |
+| `LATE_BID` | deadline 이후 bid가 관찰됨 |
 
-`NO_BID`는 실패가 아니다. `TIMEOUT`, `ERROR`, `LATE_RESPONSE`는 해당 DSP의 응답 실패 또는 지연으로 기록하지만, 경매 전체 실패로 바로 처리하지 않는다.
+`NO_BID`는 실패가 아니다. `TIMEOUT`, `ERROR`, `LATE_BID`는 해당 DSP의 응답 실패 또는 지연으로 기록하지만, 경매 전체 실패로 바로 처리하지 않는다.
 
 이 장에서는 HTTP client, thread model, retry 정책을 확정하지 않는다. 다만 DSP 호출은 경매 deadline 안에서 병렬로 수행되어야 한다.
 
@@ -742,20 +742,112 @@ DSP는 요청 처리 결과를 다음 중 하나로 반환한다.
 |---|---|
 | `BID` | BidResponse를 반환함 |
 | `NO_BID` | 정상적으로 입찰하지 않음 |
-| `INVALID_REQUEST` | DSP가 처리할 수 없는 잘못된 요청 |
 | `ERROR` | DSP 내부 처리 중 예외 발생 |
 
-SSP 관점에서는 `BID`만 낙찰 후보가 될 수 있다. `NO_BID`는 정상 결과이며, `INVALID_REQUEST`와 `ERROR`는 해당 DSP의 실패로 기록한다.
+SSP 관점에서는 `BID`만 낙찰 후보가 될 수 있다. `NO_BID`는 정상 결과이며, `ERROR`는 해당 DSP의 실패로 기록한다.
 
-## 7. 공통 실패 처리
+DSP가 요청 형식을 처리할 수 없다고 판단한 경우도 SSP 관점에서는 DSP 단위 `ERROR`로 기록한다. SSP의 `INVALID_REQUEST`와 `UNSUPPORTED_REQUEST`는 DSP 호출 전에 판단되는 요청 실패 상태로만 사용한다.
 
-### 7.1 실패 분류
+## 7. 실패와 비입찰 상태 분류
+
+이 장은 경매가 실패했는지, 정상적으로 입찰자가 없었는지, 일부 DSP만 실패했는지를 구분하기 위한 상태 분류 기준을 정의한다.
+
+이 분류는 다음 목적에 사용한다.
+
+- AuctionResult 상태 결정
+- 기능 테스트 기대 결과 정의
+- 성능 테스트 결과 해석
+- timeout, no-bid, invalid bid 원인 분석
+
+같은 `NO_WINNER` 결과라도 원인은 다를 수 있다. 모든 DSP가 정상적으로 no-bid를 반환한 경우와, 모든 DSP가 timeout된 경우는 같은 방식으로 분석하면 안 된다.
+
+### 7.1 상태 분류 원칙
+
+RTB 경매에서는 성공과 실패를 단순히 둘로 나누지 않는다.
+
+| 상태 | 의미 | 장애 여부 |
+|---|---|---|
+| `BID` | DSP가 BidResponse를 반환함 | 정상 |
+| `NO_BID` | DSP가 정상적으로 입찰하지 않음 | 정상 |
+| `NO_WINNER` | 유효한 bid 후보가 없어 낙찰자가 없음 | 정상 결과 가능 |
+| `INVALID_REQUEST` | 경매를 시작할 수 없는 잘못된 요청 | 요청 실패 |
+| `UNSUPPORTED_REQUEST` | 구조는 유효하지만 지원 범위 밖의 요청 | 요청 실패 |
+| `TIMEOUT` | DSP가 제한 시간 안에 응답하지 않음 | DSP 단위 실패 |
+| `LATE_BID` | 제한 시간 이후 도착한 bid | DSP 단위 실패 |
+| `INVALID_BID` | DSP 응답이 원 요청 또는 검증 규칙과 맞지 않음 | DSP 응답 실패 |
+| `ERROR` | 호출 실패 또는 내부 예외 | 실패 |
+
+핵심 원칙:
+
+- `NO_BID`는 실패가 아니다.
+- `NO_WINNER`는 항상 장애가 아니다.
+- 일부 DSP의 `TIMEOUT`, `ERROR`, `INVALID_BID`는 경매 전체를 중단시키지 않는다.
+- `INVALID_REQUEST`, `UNSUPPORTED_REQUEST`는 DSP 호출 전에 끝난다.
+- 낙찰 후보는 제한 시간 안에 도착한 유효한 `BID`만 될 수 있다.
 
 ### 7.2 요청 실패
 
-### 7.3 DSP 응답 실패
+요청 실패는 SSP가 경매를 시작하기 전에 판단한다.
 
-### 7.4 No-Winner 처리
+| 상태 | 발생 조건 | 처리 |
+|---|---|---|
+| `INVALID_REQUEST` | 필수 필드가 없거나 요청 구조가 잘못됨 | DSP를 호출하지 않고 AuctionResult 반환 |
+| `UNSUPPORTED_REQUEST` | 요청 구조는 유효하지만 지원 범위 밖임 | DSP를 호출하지 않고 AuctionResult 반환 |
+
+예시:
+
+- `BidRequest.id`가 없음
+- `Imp.id`가 없음
+- `imp`가 없거나 1개가 아님
+- 지원하지 않는 광고 타입
+- `bidfloorcur`가 `USD`가 아님
+- 광고 타입별 필수 필드가 없음
+
+요청 실패는 DSP 결과로 기록하지 않는다. 경매가 시작되지 않았기 때문이다.
+
+### 7.3 DSP 비입찰
+
+DSP 비입찰은 DSP가 요청을 정상적으로 처리했지만 입찰하지 않겠다고 판단한 경우다.
+
+`NO_BID` 발생 조건:
+
+- 후보 캠페인이 없음
+- 타겟 조건을 만족하는 캠페인이 없음
+- 계산된 입찰가가 bidfloor보다 낮음
+- BidResponse를 만들 수 있는 creative 정보가 없음
+
+`NO_BID`는 장애가 아니다. SSP는 다른 DSP의 유효한 bid가 있으면 경매를 계속 진행한다.
+
+모든 DSP가 `NO_BID`를 반환하면 SSP는 `NO_WINNER`를 반환할 수 있다.
+
+### 7.4 DSP 응답 실패
+
+DSP 응답 실패는 특정 DSP의 응답을 낙찰 후보로 사용할 수 없는 경우다.
+
+| 상태 | 발생 조건 | 처리 |
+|---|---|---|
+| `TIMEOUT` | deadline 안에 응답하지 않음 | 낙찰 후보 제외 |
+| `LATE_BID` | deadline 이후 bid가 도착함 | 낙찰 후보 제외 |
+| `INVALID_BID` | BidResponse가 검증 규칙을 만족하지 않음 | 낙찰 후보 제외 |
+| `ERROR` | DSP 호출 실패 또는 내부 예외 | 낙찰 후보 제외 |
+
+DSP 응답 실패는 경매 전체 실패로 바로 처리하지 않는다. 제한 시간 안에 도착한 다른 유효 bid가 있으면 Winner Selector는 그 후보들만으로 낙찰자를 결정한다.
+
+DSP 응답 실패는 `dspResultCounts`에 집계한다.
+
+### 7.5 낙찰 없음
+
+낙찰 없음은 SSP가 DSP 응답을 모두 정리했지만 유효한 bid 후보가 하나도 없는 경우다.
+
+`NO_WINNER` 발생 조건:
+
+- 모든 DSP가 `NO_BID`
+- 모든 DSP가 `TIMEOUT`, `ERROR`, `LATE_BID`, `INVALID_BID`
+- 일부는 `NO_BID`, 일부는 실패했지만 유효한 bid가 없음
+
+`NO_WINNER`는 HTTP 500으로 보지 않는다. 경매는 정상적으로 끝났지만 낙찰 가능한 bid가 없었던 결과다.
+
+AuctionResult에는 `NO_WINNER` 상태와 함께 `dspResultCounts`를 포함해 원인을 해석할 수 있게 한다.
 
 ## 8. 성능 지표와 테스트 전략
 
