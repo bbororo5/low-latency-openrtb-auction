@@ -1,21 +1,28 @@
 package com.bbororo.rtb.ssp.architecture;
 
 import com.tngtech.archunit.core.importer.ClassFileImporter;
+import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchRule;
 import org.junit.jupiter.api.Test;
 
-import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 
 class SspModuleArchitectureTest {
 
     @Test
-    void ssp_must_not_depend_on_dsp_application_internals() {
-        var classes = new ClassFileImporter().importPackages("com.bbororo.rtb.ssp");
+    void ssp_must_depend_only_on_ssp_shared_and_jdk_packages() {
+        var classes = new ClassFileImporter()
+                .withImportOption(new ImportOption.DoNotIncludeTests())
+                .importPackages("com.bbororo.rtb.ssp");
 
-        ArchRule rule = noClasses()
+        ArchRule rule = classes()
                 .that().resideInAPackage("com.bbororo.rtb.ssp..")
-                .should().dependOnClassesThat()
-                .resideInAnyPackage("com.bbororo.rtb.dsp..");
+                .should().onlyDependOnClassesThat()
+                .resideInAnyPackage(
+                        "com.bbororo.rtb.ssp..",
+                        "com.bbororo.rtb.shared..",
+                        "java.."
+                );
 
         rule.check(classes);
     }
