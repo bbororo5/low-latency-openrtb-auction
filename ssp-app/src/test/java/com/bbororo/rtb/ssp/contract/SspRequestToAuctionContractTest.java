@@ -1,12 +1,76 @@
 package com.bbororo.rtb.ssp.contract;
 
-import org.junit.jupiter.api.Disabled;
+import com.bbororo.rtb.shared.common.AuctionType;
+import com.bbororo.rtb.shared.common.MediaType;
+import com.bbororo.rtb.shared.openrtb.BidRequest;
+import com.bbororo.rtb.shared.openrtb.Imp;
+import com.bbororo.rtb.ssp.requesthandler.AcceptedAuctionRequest;
+import com.bbororo.rtb.ssp.requesthandler.DefaultRequestHandler;
+import com.bbororo.rtb.ssp.requesthandler.RejectedAuctionRequest;
+import com.bbororo.rtb.ssp.requesthandler.RequestHandler;
+import com.bbororo.rtb.ssp.requesthandler.RequestRejectionReason;
 import org.junit.jupiter.api.Test;
 
-@Disabled("SSP request and auction component contracts are not implemented yet.")
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+
 class SspRequestToAuctionContractTest {
+
+    private final RequestHandler requestHandler = new DefaultRequestHandler();
 
     @Test
     void request_handler_passes_normalized_auction_request_to_auction_flow() {
+        var receivedAt = Instant.parse("2026-06-26T10:15:30Z");
+        var bidRequest = new BidRequest(
+                "auction-1",
+                List.of(new Imp("imp-1", MediaType.BANNER, new BigDecimal("0.75"), "USD")),
+                80,
+                1
+        );
+
+        var result = requestHandler.handle(bidRequest, receivedAt);
+
+        var accepted = assertInstanceOf(AcceptedAuctionRequest.class, result);
+        var auctionRequest = accepted.auctionRequest();
+        assertAll(
+                () -> assertEquals("auction-1", auctionRequest.requestId()),
+                () -> assertEquals("imp-1", auctionRequest.impId()),
+                () -> assertEquals(MediaType.BANNER, auctionRequest.mediaType()),
+                () -> assertEquals(new BigDecimal("0.75"), auctionRequest.bidfloor()),
+                () -> assertEquals("USD", auctionRequest.bidfloorcur()),
+                () -> assertEquals(80, auctionRequest.tmax()),
+                () -> assertEquals(AuctionType.FIRST_PRICE, auctionRequest.auctionType()),
+                () -> assertEquals(receivedAt, auctionRequest.receivedAt())
+        );
+    }
+
+    @Test
+    void request_handler_rejects_invalid_bid_request_before_auction_flow() {
+        var bidRequest = new BidRequest("auction-1", List.of(), 80, 1);
+
+        var result = requestHandler.handle(bidRequest, Instant.parse("2026-06-26T10:15:30Z"));
+
+        var rejected = assertInstanceOf(RejectedAuctionRequest.class, result);
+        assertEquals(RequestRejectionReason.INVALID_REQUEST, rejected.reason());
+    }
+
+    @Test
+    void request_handler_rejects_unsupported_auction_type_before_auction_flow() {
+        var bidRequest = new BidRequest(
+                "auction-1",
+                List.of(new Imp("imp-1", MediaType.BANNER, new BigDecimal("0.75"), "USD")),
+                80,
+                2
+        );
+
+        var result = requestHandler.handle(bidRequest, Instant.parse("2026-06-26T10:15:30Z"));
+
+        var rejected = assertInstanceOf(RejectedAuctionRequest.class, result);
+        assertEquals(RequestRejectionReason.UNSUPPORTED_REQUEST, rejected.reason());
     }
 }
