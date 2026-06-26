@@ -1,0 +1,10 @@
+package com.bbororo.rtb.shared.openrtb;
+
+import java.util.List;
+
+public record BidResponse(
+        String id,
+        List<SeatBid> seatbid,
+        String cur
+) {
+}
