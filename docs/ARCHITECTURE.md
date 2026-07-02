@@ -147,6 +147,8 @@ flowchart LR
 
 `Lightweight SSP Application`은 OpenRTB BidRequest를 받아 경량 DSP로 전달하고, BidResponse를 수집해 낙찰자와 낙찰가를 결정한다.
 
+SSP와 DSP 사이의 요청/응답 경계는 OpenRTB subset을 따른다. 광고 타입은 경계 객체에서 커스텀 `mediaType` 필드로 표현하지 않고, `Imp.banner`, `Imp.video`, `Imp.native` 계열 객체의 존재로 표현한다. 각 애플리케이션 내부에서는 이 구조를 `BANNER`, `VIDEO`, `NATIVE` 같은 내부 enum으로 정규화해 사용한다.
+
 주요 책임:
 
 - BidRequest 수신 및 검증

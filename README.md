@@ -13,6 +13,7 @@ OpenRTB 2.6의 입찰 요청(`BidRequest`) / 입찰 응답(`BidResponse`) 흐름
 관심사는 다음과 같습니다.
 
 - OpenRTB 2.6의 핵심 요청/응답 계약 이해
+- OpenRTB `Imp.banner` / `Imp.video` / `Imp.native` 기반 광고 타입 표현
 - 실시간 광고 입찰 요청 처리
 - 광고 슬롯, 광고 타입, bidfloor 등 입찰 판단 정보 해석
 - 입찰 여부와 입찰가 결정

@@ -103,6 +103,8 @@ OpenRTB 표준에서 `BidRequest`는 SSP가 DSP에게 보내는 입찰 요청이
 
 `BidRequest`는 경량 SSP가 경량 DSP에게 보내는 OpenRTB 표준 입찰 요청이다. 경량 SSP는 이 요청을 검증하고, 처리 가능한 요청만 경량 DSP에게 전달한다.
 
+SSP-DSP 경계에서는 커스텀 `mediaType` 필드를 사용하지 않는다. 광고 타입은 OpenRTB 객체 구조에 맞게 `Imp.banner`, `Imp.video`, `Imp.native` 계열 객체의 존재로 표현한다. 내부 컴포넌트는 이 경계 객체를 검증한 뒤 `MediaType` enum으로 정규화해 사용한다.
+
 지원하는 요청 형태:
 
 - 하나의 `BidRequest`는 정확히 하나의 `Imp`를 가진다.
@@ -140,7 +142,8 @@ OpenRTB 표준에서 `BidRequest`는 SSP가 DSP에게 보내는 입찰 요청이
 
 - `BidRequest.id` 또는 `Imp.id`가 없으면 `INVALID_REQUEST`다.
 - `imp`가 없거나 1개가 아니면 `UNSUPPORTED_REQUEST`다.
-- `Imp`가 지원 광고 타입 중 정확히 하나를 갖지 않으면 `UNSUPPORTED_REQUEST`다.
+- `Imp`가 지원 광고 타입 객체를 하나도 갖지 않으면 `UNSUPPORTED_REQUEST`다.
+- `Imp`가 지원 광고 타입 객체를 두 개 이상 가지면 요청 의미가 모호하므로 `INVALID_REQUEST`다.
 - 광고 타입별 필수 필드가 없으면 `INVALID_REQUEST`다.
 - `Native.request`가 JSON 문자열로 파싱되지 않으면 `INVALID_REQUEST`다.
 - `bidfloorcur`가 있고 `USD`가 아니면 `UNSUPPORTED_REQUEST`다.
@@ -455,6 +458,8 @@ SSP가 판단하지 않는 것:
 
 Request Handler는 원본 OpenRTB BidRequest 객체를 전체 SSP 흐름에 그대로 들고 다니지 않는다. 대신 지원 필드만 추출해 내부 경매 요청을 만든다. 이 결정은 지원 범위를 명확히 하고, 검증되지 않은 OpenRTB 필드가 다른 컴포넌트에서 우연히 사용되는 일을 막기 위한 것이다.
 
+광고 타입도 같은 원칙을 따른다. 외부 `Imp`에는 `mediaType` 필드를 두지 않고 `banner`, `video`, `native` 객체를 둔다. Request Handler는 이 중 정확히 하나를 해석해 내부 `mediaType`으로 정규화한다.
+
 내부 경매 요청:
 
 | 필드 | 필요성 | 없을 때 처리 |
@@ -623,6 +628,8 @@ DSP가 판단하지 않는 것:
 `Bid Handler`는 SSP가 보낸 OpenRTB BidRequest를 받고 DSP 내부 입찰 판단에 필요한 `BidContext`를 만든다.
 
 DSP는 SSP가 이미 검증한 요청을 받더라도 최소 검증을 수행한다. DSP는 독립 컴포넌트이며, 잘못된 요청이 캠페인 매칭이나 가격 산정까지 흘러 들어가면 원인 분석이 어려워지기 때문이다.
+
+Bid Handler 역시 OpenRTB 경계 객체를 그대로 내부 판단 로직에 퍼뜨리지 않는다. `Imp.banner`, `Imp.video`, `Imp.native` 계열 객체를 해석해 `BidContext.mediaType`과 타입별 조건으로 정규화한 뒤 Campaign Lookup 이후 단계로 넘긴다.
 
 BidContext:
 
