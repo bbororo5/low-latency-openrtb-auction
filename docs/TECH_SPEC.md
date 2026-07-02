@@ -963,19 +963,20 @@ AuctionResult에는 `NO_WINNER` 상태와 함께 `dspResultCounts`를 포함해 
 |---|---|---|
 | E2E smoke test | hot path를 처음 세울 때 | 전체 경매 흐름이 끝까지 동작하는지 확인 |
 | Unit test | 판단 로직을 리팩토링하거나 최적화할 때 | Bid Judge, Winner Selector, Matcher, Pricing 같은 핵심 규칙 회귀 방지 |
-| Integration test | 컴포넌트 경계나 계약을 바꿀 때 | SSP 내부 협력, DSP 내부 협력, SSP-DSP 계약 검증 |
+| Integration test | 리팩토링 중 여러 컴포넌트 협력 위험이 커질 때 | SSP 내부 협력, DSP 내부 협력, SSP-DSP 연결 흐름 검증 |
 | Performance test | baseline 측정과 최적화 전후 비교 시 | p95/p99, deadline compliance, 상태별 결과 분포 비교 |
 
-이 프로젝트의 테스트 가드레일은 C2와 C3 레벨을 구분한다.
+이 프로젝트의 상시 테스트 가드레일은 architecture test와 E2E smoke test를 중심으로 둔다. 컴포넌트와 컨테이너 사이의 구조적 계약은 Java interface와 compiler가 검증하고, 패키지 의존 방향은 ArchUnit이 검증한다.
 
 | 구분 | 테스트 대상 | 목적 |
 |---|---|---|
 | C2 architecture test | `shared`, `ssp-app`, `dsp-app` 모듈 의존 방향 | SSP/DSP 컨테이너 경계를 코드 의존성으로 무너뜨리지 않게 한다. |
 | C3 architecture test | SSP/DSP 내부 C3 컴포넌트 패키지 의존 방향 | C3 다이어그램의 협력 방향을 코드 패키지 경계로 검증한다. |
-| C2 contract test | SSP-DSP OpenRTB 요청/응답, Campaign Snapshot | 컨테이너 사이에 오가는 데이터 계약을 검증한다. |
-| C3 contract test | 컨테이너 내부 컴포넌트 간 입력/출력 | Request Handler, Auction Flow, Bid Judge 같은 내부 컴포넌트 협력 계약을 검증한다. |
+| Component interface | C3 컴포넌트 입력/출력 타입 | 구현체가 정해진 메시지 형태를 따르게 한다. |
+| Container interface | SSP-DSP 사이 OpenRTB subset 모델 | 경량 SSP와 경량 DSP 사이의 연결 형식을 코드 타입으로 고정한다. |
+| E2E smoke test | BidRequest부터 AuctionResult까지의 전체 흐름 | 사용자 시나리오 관점에서 hot path가 끝까지 동작하는지 확인한다. |
 
-Architecture test는 패키지 의존성을 검증한다. Contract test는 컴포넌트 사이에 오가는 입력과 출력의 의미를 검증한다. 둘은 같은 경계를 다루더라도 목적이 다르므로 분리해서 작성한다.
+별도의 contract test 계층은 두지 않는다. 내부 컴포넌트 간 시그니처 계약은 interface와 compiler에 맡기고, 의미 규칙은 리팩토링 또는 최적화 과정에서 필요한 영역에 unit/integration test로 추가한다. 이 원칙은 내부 메시지 흐름을 과도하게 고정해 리팩토링을 방해하지 않기 위한 것이다.
 
 예시:
 
