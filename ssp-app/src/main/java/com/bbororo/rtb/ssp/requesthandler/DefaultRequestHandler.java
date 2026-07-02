@@ -1,6 +1,7 @@
 package com.bbororo.rtb.ssp.requesthandler;
 
 import com.bbororo.rtb.shared.common.AuctionType;
+import com.bbororo.rtb.shared.common.MediaType;
 import com.bbororo.rtb.shared.openrtb.BidRequest;
 import com.bbororo.rtb.shared.openrtb.Imp;
 import com.bbororo.rtb.ssp.auctionflow.AuctionRequest;
@@ -26,14 +27,18 @@ public final class DefaultRequestHandler implements RequestHandler {
         if (isBlank(impression.id())) {
             return reject(RequestRejectionReason.INVALID_REQUEST, "Impression id is required.");
         }
-        if (impression.mediaType() == null) {
-            return reject(RequestRejectionReason.UNSUPPORTED_REQUEST, "Impression media type is required.");
+        MediaType mediaType = resolveMediaType(impression);
+        if (mediaType == null) {
+            return reject(RequestRejectionReason.UNSUPPORTED_REQUEST, "One supported impression media object is required.");
+        }
+        if (hasMultipleMediaObjects(impression)) {
+            return reject(RequestRejectionReason.INVALID_REQUEST, "Only one impression media object is allowed.");
         }
 
         var auctionRequest = new AuctionRequest(
                 bidRequest.id(),
                 impression.id(),
-                impression.mediaType(),
+                mediaType,
                 bidfloorOrZero(impression),
                 currencyOrDefault(impression),
                 bidRequest.tmax(),
@@ -45,6 +50,33 @@ public final class DefaultRequestHandler implements RequestHandler {
 
     private static RejectedAuctionRequest reject(RequestRejectionReason reason, String message) {
         return new RejectedAuctionRequest(reason, message);
+    }
+
+    private static MediaType resolveMediaType(Imp impression) {
+        if (impression.banner() != null) {
+            return MediaType.BANNER;
+        }
+        if (impression.video() != null) {
+            return MediaType.VIDEO;
+        }
+        if (impression.nativeAd() != null) {
+            return MediaType.NATIVE;
+        }
+        return null;
+    }
+
+    private static boolean hasMultipleMediaObjects(Imp impression) {
+        int count = 0;
+        if (impression.banner() != null) {
+            count++;
+        }
+        if (impression.video() != null) {
+            count++;
+        }
+        if (impression.nativeAd() != null) {
+            count++;
+        }
+        return count > 1;
     }
 
     private static BigDecimal bidfloorOrZero(Imp impression) {
