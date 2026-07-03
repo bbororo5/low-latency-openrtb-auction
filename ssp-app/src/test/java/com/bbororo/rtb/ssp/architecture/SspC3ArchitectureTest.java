@@ -59,6 +59,7 @@ class SspC3ArchitectureTest {
                         "com.bbororo.rtb.ssp.dspgateway..",
                         "com.bbororo.rtb.ssp.auctionflow..",
                         "com.bbororo.rtb.shared..",
+                        "com.fasterxml.jackson..",
                         "java.."
                 )
                 .allowEmptyShould(true);

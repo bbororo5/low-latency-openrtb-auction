@@ -21,6 +21,7 @@ class SspModuleArchitectureTest {
                 .resideInAnyPackage(
                         "com.bbororo.rtb.ssp..",
                         "com.bbororo.rtb.shared..",
+                        "com.fasterxml.jackson..",
                         "java.."
                 );
 
