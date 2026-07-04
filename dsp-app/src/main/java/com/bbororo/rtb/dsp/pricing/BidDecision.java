@@ -1,5 +1,6 @@
 package com.bbororo.rtb.dsp.pricing;
 
+import com.bbororo.rtb.dsp.matcher.MatchGrade;
 import com.bbororo.rtb.shared.common.MediaType;
 
 import java.math.BigDecimal;
@@ -12,9 +13,11 @@ public record BidDecision(
         BigDecimal price,
         String currency,
         String campaignId,
+        String advertiserId,
         String creativeId,
         List<String> advertiserDomains,
         MediaType mediaType,
-        String adm
+        String adm,
+        MatchGrade matchGrade
 ) {
 }
