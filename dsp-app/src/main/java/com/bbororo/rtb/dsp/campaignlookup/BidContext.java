@@ -12,6 +12,9 @@ public record BidContext(
         BigDecimal bidfloor,
         String currency,
         AuctionType auctionType,
-        Integer tmax
+        Integer tmax,
+        SiteContext site,
+        DeviceContext device,
+        MediaSpec mediaSpec
 ) {
 }
