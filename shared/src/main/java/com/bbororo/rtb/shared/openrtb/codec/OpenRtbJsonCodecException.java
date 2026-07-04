@@ -1,4 +1,4 @@
-package com.bbororo.rtb.ssp.dspgateway;
+package com.bbororo.rtb.shared.openrtb.codec;
 
 public final class OpenRtbJsonCodecException extends RuntimeException {
 
