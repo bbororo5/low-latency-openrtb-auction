@@ -7,5 +7,9 @@ public interface OpenRtbJsonCodec {
 
     String encodeRequest(BidRequest bidRequest);
 
+    BidRequest decodeRequest(String body);
+
+    String encodeResponse(BidResponse bidResponse);
+
     BidResponse decodeResponse(String body);
 }

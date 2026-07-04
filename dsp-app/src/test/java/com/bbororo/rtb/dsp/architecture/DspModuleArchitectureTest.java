@@ -21,6 +21,7 @@ class DspModuleArchitectureTest {
                 .resideInAnyPackage(
                         "com.bbororo.rtb.dsp..",
                         "com.bbororo.rtb.shared..",
+                        "com.sun.net.httpserver..",
                         "java.."
                 )
                 .allowEmptyShould(true);

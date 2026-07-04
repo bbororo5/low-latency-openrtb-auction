@@ -33,9 +33,33 @@ public final class JacksonOpenRtbJsonCodec implements OpenRtbJsonCodec {
     @Override
     public String encodeRequest(BidRequest bidRequest) {
         try {
-            return objectMapper.writeValueAsString(toJson(bidRequest));
+            return objectMapper.writeValueAsString(requestToJson(bidRequest));
         } catch (JsonProcessingException e) {
             throw new OpenRtbJsonCodecException("Failed to encode BidRequest", e);
+        }
+    }
+
+    @Override
+    public BidRequest decodeRequest(String body) {
+        try {
+            JsonNode root = objectMapper.readTree(body);
+            return new BidRequest(
+                    text(root, "id"),
+                    impressions(root.path("imp")),
+                    integer(root, "tmax"),
+                    integer(root, "at")
+            );
+        } catch (JsonProcessingException e) {
+            throw new OpenRtbJsonCodecException("Failed to decode BidRequest", e);
+        }
+    }
+
+    @Override
+    public String encodeResponse(BidResponse bidResponse) {
+        try {
+            return objectMapper.writeValueAsString(responseToJson(bidResponse));
+        } catch (JsonProcessingException e) {
+            throw new OpenRtbJsonCodecException("Failed to encode BidResponse", e);
         }
     }
 
@@ -53,16 +77,16 @@ public final class JacksonOpenRtbJsonCodec implements OpenRtbJsonCodec {
         }
     }
 
-    private ObjectNode toJson(BidRequest bidRequest) {
+    private ObjectNode requestToJson(BidRequest bidRequest) {
         ObjectNode root = objectMapper.createObjectNode();
         put(root, "id", bidRequest.id());
-        root.set("imp", impressions(bidRequest.imp()));
+        root.set("imp", impressionsToJson(bidRequest.imp()));
         put(root, "tmax", bidRequest.tmax());
         put(root, "at", bidRequest.at());
         return root;
     }
 
-    private ArrayNode impressions(List<Imp> impressions) {
+    private ArrayNode impressionsToJson(List<Imp> impressions) {
         ArrayNode array = objectMapper.createArrayNode();
         if (impressions == null) {
             return array;
@@ -76,6 +100,24 @@ public final class JacksonOpenRtbJsonCodec implements OpenRtbJsonCodec {
             array.add(node);
         }
         return array;
+    }
+
+    private List<Imp> impressions(JsonNode impressionsNode) {
+        List<Imp> impressions = new ArrayList<>();
+        if (!impressionsNode.isArray()) {
+            return impressions;
+        }
+        for (JsonNode node : impressionsNode) {
+            impressions.add(new Imp(
+                    text(node, "id"),
+                    banner(node.path("banner")),
+                    video(node.path("video")),
+                    nativeAd(node.path("native")),
+                    decimal(node, "bidfloor"),
+                    text(node, "bidfloorcur")
+            ));
+        }
+        return impressions;
     }
 
     private void putMediaObjects(ObjectNode node, Imp imp) {
@@ -97,6 +139,13 @@ public final class JacksonOpenRtbJsonCodec implements OpenRtbJsonCodec {
         return node;
     }
 
+    private Banner banner(JsonNode node) {
+        if (!node.isObject()) {
+            return null;
+        }
+        return new Banner(integer(node, "w"), integer(node, "h"));
+    }
+
     private ObjectNode video(Video video) {
         ObjectNode node = objectMapper.createObjectNode();
         put(node, "w", video.w());
@@ -108,10 +157,73 @@ public final class JacksonOpenRtbJsonCodec implements OpenRtbJsonCodec {
         return node;
     }
 
+    private Video video(JsonNode node) {
+        if (!node.isObject()) {
+            return null;
+        }
+        return new Video(
+                integer(node, "w"),
+                integer(node, "h"),
+                strings(node.path("mimes")),
+                integer(node, "minduration"),
+                integer(node, "maxduration"),
+                integers(node.path("protocols"))
+        );
+    }
+
     private ObjectNode nativeAd(NativeAd nativeAd) {
         ObjectNode node = objectMapper.createObjectNode();
         put(node, "request", nativeAd.request());
         return node;
+    }
+
+    private NativeAd nativeAd(JsonNode node) {
+        if (!node.isObject()) {
+            return null;
+        }
+        return new NativeAd(text(node, "request"));
+    }
+
+    private ObjectNode responseToJson(BidResponse bidResponse) {
+        ObjectNode root = objectMapper.createObjectNode();
+        put(root, "id", bidResponse.id());
+        root.set("seatbid", seatBidsToJson(bidResponse.seatbid()));
+        put(root, "cur", bidResponse.cur());
+        return root;
+    }
+
+    private ArrayNode seatBidsToJson(List<SeatBid> seatBids) {
+        ArrayNode array = objectMapper.createArrayNode();
+        if (seatBids == null) {
+            return array;
+        }
+        for (SeatBid seatBid : seatBids) {
+            ObjectNode node = objectMapper.createObjectNode();
+            put(node, "seat", seatBid.seat());
+            node.set("bid", bidsToJson(seatBid.bid()));
+            array.add(node);
+        }
+        return array;
+    }
+
+    private ArrayNode bidsToJson(List<Bid> bids) {
+        ArrayNode array = objectMapper.createArrayNode();
+        if (bids == null) {
+            return array;
+        }
+        for (Bid bid : bids) {
+            ObjectNode node = objectMapper.createObjectNode();
+            put(node, "id", bid.id());
+            put(node, "impid", bid.impid());
+            put(node, "price", bid.price());
+            put(node, "cid", bid.cid());
+            put(node, "crid", bid.crid());
+            putArray(node, "adomain", bid.adomain());
+            put(node, "mtype", bid.mtype());
+            put(node, "adm", bid.adm());
+            array.add(node);
+        }
+        return array;
     }
 
     private List<SeatBid> seatBids(JsonNode seatBidNode) {
@@ -152,6 +264,17 @@ public final class JacksonOpenRtbJsonCodec implements OpenRtbJsonCodec {
         }
         for (JsonNode value : node) {
             values.add(value.asText());
+        }
+        return values;
+    }
+
+    private List<Integer> integers(JsonNode node) {
+        List<Integer> values = new ArrayList<>();
+        if (!node.isArray()) {
+            return values;
+        }
+        for (JsonNode value : node) {
+            values.add(value.asInt());
         }
         return values;
     }
