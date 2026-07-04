@@ -64,7 +64,7 @@ class DspC3ArchitectureTest {
     }
 
     @Test
-    void pricing_must_depend_only_on_pricing_matcher_shared_and_jdk_packages() {
+    void pricing_must_depend_only_on_pricing_matcher_campaign_lookup_shared_and_jdk_packages() {
         var classes = mainClasses();
 
         ArchRule rule = classes()
@@ -73,6 +73,7 @@ class DspC3ArchitectureTest {
                 .resideInAnyPackage(
                         "com.bbororo.rtb.dsp.pricing..",
                         "com.bbororo.rtb.dsp.matcher..",
+                        "com.bbororo.rtb.dsp.campaignlookup..",
                         "com.bbororo.rtb.shared..",
                         "java.."
                 )
