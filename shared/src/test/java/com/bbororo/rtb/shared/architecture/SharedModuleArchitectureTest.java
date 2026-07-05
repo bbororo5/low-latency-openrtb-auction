@@ -18,6 +18,7 @@ class SharedModuleArchitectureTest {
         ArchRule rule = classes()
                 .that().resideInAPackage("com.bbororo.rtb.shared..")
                 .and().resideOutsideOfPackage("com.bbororo.rtb.shared.openrtb.codec..")
+                .and().resideOutsideOfPackage("com.bbororo.rtb.shared.observability..")
                 .should().onlyDependOnClassesThat()
                 .resideInAnyPackage(
                         "com.bbororo.rtb.shared..",
@@ -39,6 +40,25 @@ class SharedModuleArchitectureTest {
                 .resideInAnyPackage(
                         "com.bbororo.rtb.shared..",
                         "com.fasterxml.jackson..",
+                        "java.."
+                );
+
+        rule.check(classes);
+    }
+
+    @Test
+    void shared_observability_may_depend_on_httpserver_and_micrometer() {
+        var classes = new ClassFileImporter()
+                .withImportOption(new ImportOption.DoNotIncludeTests())
+                .importPackages("com.bbororo.rtb.shared");
+
+        ArchRule rule = classes()
+                .that().resideInAPackage("com.bbororo.rtb.shared.observability..")
+                .should().onlyDependOnClassesThat()
+                .resideInAnyPackage(
+                        "com.bbororo.rtb.shared..",
+                        "com.sun.net.httpserver..",
+                        "io.micrometer..",
                         "java.."
                 );
 
