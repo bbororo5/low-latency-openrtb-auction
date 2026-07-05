@@ -114,3 +114,33 @@ SSP / DSP
 ```
 
 Spring Boot Actuator is not used in the baseline. Micrometer is used directly so that Prometheus/Grafana integration remains possible while keeping the HTTP server stack small.
+
+## 7. Local Monitoring Setup
+
+SSP와 DSP 애플리케이션은 로컬 JVM 프로세스로 실행하고, Prometheus/Grafana만 Docker Compose로 실행한다.
+
+```bash
+docker compose -f docker-compose.observability.yml up
+```
+
+Prometheus scrape targets:
+
+| Target | Purpose |
+|---|---|
+| `host.docker.internal:8080/metrics` | SSP auction metrics |
+| `host.docker.internal:8081/metrics` | DSP-A metrics |
+| `host.docker.internal:8082/metrics` | DSP-B metrics |
+| `host.docker.internal:8083/metrics` | DSP-C metrics |
+| `host.docker.internal:8084/metrics` | DSP-D metrics |
+
+Grafana는 `http://localhost:3000`, Prometheus는 `http://localhost:9090`에서 확인한다.
+
+Latency timer는 Prometheus histogram bucket을 함께 노출한다. p95/p99는 Grafana에서 다음 형태로 확인한다.
+
+```promql
+histogram_quantile(0.95, rate(rtb_ssp_auction_duration_seconds_bucket[1m]))
+```
+
+```promql
+histogram_quantile(0.99, rate(rtb_ssp_dsp_call_duration_seconds_bucket[1m]))
+```
