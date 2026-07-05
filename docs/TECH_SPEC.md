@@ -1092,6 +1092,26 @@ BidRequest -> SSP -> DSP 4개 -> SSP 낙찰 판단 -> AuctionResult
 
 Smoke test는 성능 한계를 측정하지 않는다. `status=WINNER`, 기본 topology의 `winnerDspId=dsp-b`, DSP 결과 분포가 기대값과 일치하는지 확인하고, SSP/DSP `/metrics`에 RTB metric이 생성되는지 확인한다.
 
+Load baseline은 고정된 로컬 Compose 조건에서 현재 구현이 어느 정도의 요청률을 안정적으로 처리하는지 확인한다.
+
+감당 가능 기준:
+
+- `checks == 100%`
+- `http_req_failed == 0%`
+- `winnerDspId == dsp-b`
+- DSP 결과 분포가 `bid=2`, `no-bid=1`, `timeout=1`, `invalid=0`, `error=0`으로 유지
+- p95/p99 latency 기록
+
+Load baseline 스크립트는 아직 latency threshold로 실패하지 않는다. 이 단계의 목적은 목표 latency를 미리 가정하는 것이 아니라, 고정 조건에서 관찰된 p95/p99를 바탕으로 이후 목표 트래픽과 latency 기준을 정하는 것이다.
+
+첫 baseline은 계단식으로 실행한다.
+
+```text
+10 RPS -> 30 RPS -> 50 RPS
+```
+
+각 단계에서 결과 품질이 유지되면 다음 RPS로 올리고, check 실패 또는 error 증가가 발생하면 해당 구간을 현재 구현의 불안정 구간으로 본다.
+
 테스트 축:
 
 | 축 | 관찰 목적 |
