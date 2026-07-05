@@ -1037,7 +1037,40 @@ AuctionResult에는 `NO_WINNER` 상태와 함께 `dspResultCounts`를 포함해 
 
 각 테스트는 AuctionResult의 `status`, `winnerDspId`, `auctionPrice`, `dspResultCounts`를 검증한다.
 
-### 8.5 부하 테스트 시나리오
+### 8.5 Lightweight DSP Instance Topology
+
+이 프로젝트는 여러 DSP 업체를 각각 구현하지 않는다.
+
+동일한 Lightweight DSP Application을 여러 인스턴스로 실행하고, 각 인스턴스에 서로 다른 `dspId`, port, Campaign Snapshot, 응답 모드를 부여해 다수 입찰 참여자를 시뮬레이션한다.
+
+SSP는 각 인스턴스가 같은 코드로 실행되는지 알지 못한다. SSP는 등록된 OpenRTB HTTP endpoint 목록만 알고, 동일한 BidRequest를 각 endpoint로 fan-out한다.
+
+초기 E2E smoke topology:
+
+| Instance | Role | Behavior |
+|---|---|---|
+| `dsp-a` | valid bidder | 정상 bid, 중간 가격 |
+| `dsp-b` | winning bidder | 정상 bid, 높은 가격 |
+| `dsp-c` | no-bid participant | 정상 no-bid |
+| `dsp-d` | slow or failing participant | timeout 또는 지연 응답 |
+
+이 4개 인스턴스는 한 번의 경매에서 bid 경합, 정상 비입찰, timeout 실패 격리, winner selection을 함께 검증하기 위한 최소 구성이다.
+
+추가 검증에서는 다음 인스턴스를 더할 수 있다.
+
+| Instance | Role | Behavior |
+|---|---|---|
+| `dsp-e` | invalid bid participant | 잘못된 `impid`, bidfloor 미만 가격, media type 불일치 같은 invalid bid 반환 |
+
+성능 테스트에서는 같은 구현체를 더 많은 인스턴스로 확장한다.
+
+```text
+4 DSP -> 8 DSP -> 16 DSP -> 32 DSP
+```
+
+이 확장은 여러 DSP 업체의 비즈니스 로직을 구현하기 위한 것이 아니라, SSP fan-out, 응답 수집, timeout 비율, p95/p99 latency가 DSP endpoint 수에 따라 어떻게 변하는지 측정하기 위한 것이다.
+
+### 8.6 부하 테스트 시나리오
 
 부하 테스트는 시스템의 절대 성능을 과장하기 위한 것이 아니라, 어떤 조건에서 latency와 deadline 준수율이 흔들리는지 확인하기 위한 것이다.
 
@@ -1057,7 +1090,7 @@ AuctionResult에는 `NO_WINNER` 상태와 함께 `dspResultCounts`를 포함해 
 
 Campaign Lookup은 초기 구현에서 단순 순회가 될 수 있다. 캠페인 수 증가에 따라 p95/p99가 급격히 악화되면 광고 타입, 크기, 국가 같은 조건 기반 인덱스 개선 후보로 기록한다.
 
-### 8.6 결과 해석 기준
+### 8.7 결과 해석 기준
 
 성능 결과는 latency 숫자만으로 판단하지 않는다. 경매 결과의 품질과 상태 분류를 함께 해석한다.
 
