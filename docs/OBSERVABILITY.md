@@ -1,0 +1,116 @@
+# Observability Strategy
+
+이 문서는 RTB hot path의 지연과 결과 품질을 설명하기 위해 어떤 메트릭을 수집할지 정의한다.
+
+목표는 운영 모니터링 도구를 많이 붙이는 것이 아니라, 성능 측정과 최적화 과정에서 다음 질문에 답할 수 있는 최소 관찰성을 확보하는 것이다.
+
+- 전체 경매가 느린가?
+- DSP 호출이 느린가?
+- DSP 내부 입찰 판단이 느린가?
+- timeout, no-bid, no-winner가 왜 발생했는가?
+- 성능 개선이 결과 품질을 망치지 않았는가?
+
+## 1. Observability Principles
+
+메트릭은 운영 질문에 답하는 숫자다. 이 프로젝트는 SRE의 Four Golden Signals 중 1차로 Latency, Traffic, Errors에 집중한다.
+
+| Signal | 질문 | 이 프로젝트의 의미 |
+|---|---|---|
+| Latency | 얼마나 오래 걸리는가? | auction duration, DSP call duration, DSP bid handling duration |
+| Traffic | 얼마나 많이 처리하는가? | auction request count, DSP call count, bid handling count |
+| Errors | 얼마나 실패하거나 제외되는가? | timeout, late bid, invalid bid, error |
+| Saturation | 자원이 얼마나 찼는가? | active threads, connection usage, CPU, GC. 초기 범위에서는 2차로 둔다. |
+
+RTB에서는 모든 비정상처럼 보이는 결과가 장애는 아니다. `NO_BID`는 정상적인 비입찰이고, `NO_WINNER`도 유효 bid가 없는 정상 결과일 수 있다. 따라서 timeout, invalid bid, no-bid, no-winner를 하나의 error로 묶지 않는다.
+
+## 2. Primary Metrics
+
+1차 메트릭은 전체 경로와 주요 경계만 본다.
+
+### SSP
+
+| Metric | Type | Tags | Purpose |
+|---|---|---|---|
+| `rtb_ssp_auction_duration` | Timer | `media_type`, `result` | Auction Client 요청부터 AuctionResult 반환까지의 지연 시간 |
+| `rtb_ssp_auction_result_total` | Counter | `media_type`, `result` | winner, no-winner, invalid request, unsupported request 분포 |
+| `rtb_ssp_dsp_call_duration` | Timer | `dsp_id`, `result` | SSP가 DSP 하나를 호출하고 결과를 분류하기까지의 지연 시간 |
+| `rtb_ssp_dsp_call_result_total` | Counter | `dsp_id`, `result` | DSP별 bid, no-bid, timeout, late bid, error 분포 |
+
+### DSP
+
+| Metric | Type | Tags | Purpose |
+|---|---|---|---|
+| `rtb_dsp_bid_handle_duration` | Timer | `media_type`, `result` | DSP가 BidRequest를 받아 bid/no-bid를 결정하기까지의 지연 시간 |
+| `rtb_dsp_bid_result_total` | Counter | `media_type`, `result` | DSP의 bid, no-bid, error 분포 |
+| `rtb_dsp_no_bid_reason_total` | Counter | `media_type`, `reason` | DSP가 no-bid를 낸 이유 분포 |
+
+## 3. Secondary Metrics
+
+2차 메트릭은 1차 메트릭에서 병목이 의심될 때 추가한다.
+
+| Metric | Purpose |
+|---|---|
+| `rtb_dsp_campaign_lookup_duration` | 캠페인 후보 조회가 p95/p99에 미치는 영향 확인 |
+| `rtb_dsp_matcher_duration` | 타겟 조건 매칭 비용 확인 |
+| `rtb_dsp_pricing_duration` | 가격 산정 비용 확인 |
+| JVM / GC / thread / connection metrics | 자원 포화 또는 runtime 병목 의심 시 확인 |
+
+## 4. Tag Policy
+
+Prometheus에서는 label, Micrometer에서는 tag라고 부른다. tag는 metric을 나누어 보는 차원이다.
+
+낮은 cardinality tag만 허용한다.
+
+Allowed:
+
+- `app`: `ssp`, `dsp`
+- `media_type`: `banner`, `video`, `native`, `unknown`
+- `result`: `winner`, `no_winner`, `bid`, `no_bid`, `timeout`, `late_bid`, `invalid_bid`, `error`
+- `reason`: `no_campaign`, `no_matched_campaign`, `bid_below_floor`, `missing_creative`, `invalid_request`, `unsupported_request`
+- `dsp_id`: 테스트에서 사용하는 고정된 경량 DSP 식별자
+
+Disallowed:
+
+- `request_id`
+- `imp_id`
+- `bid_id`
+- `campaign_id`
+- `creative_id`
+- `user_id`
+- `ip`
+
+높은 cardinality 값은 metric tag가 아니라 log에 남긴다.
+
+## 5. Metrics and Logs
+
+메트릭은 집계용이고, 로그는 개별 사건 추적용이다.
+
+Metric examples:
+
+- timeout rate
+- no-bid reason count
+- auction p95/p99
+
+Log examples:
+
+- `requestId`
+- `impId`
+- `dspId`
+- `campaignId`
+- `elapsedMs`
+- `reason`
+
+## 6. Monitoring Path
+
+Baseline observability path:
+
+```text
+SSP / DSP
+ -> JDK HttpServer
+ -> Micrometer Timer/Counter
+ -> /metrics
+ -> Prometheus
+ -> Grafana
+```
+
+Spring Boot Actuator is not used in the baseline. Micrometer is used directly so that Prometheus/Grafana integration remains possible while keeping the HTTP server stack small.
