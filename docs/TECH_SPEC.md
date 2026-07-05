@@ -1074,6 +1074,24 @@ SSP는 각 인스턴스가 같은 코드로 실행되는지 알지 못한다. SS
 
 부하 테스트는 시스템의 절대 성능을 과장하기 위한 것이 아니라, 어떤 조건에서 latency와 deadline 준수율이 흔들리는지 확인하기 위한 것이다.
 
+성능 테스트 종류:
+
+| 종류 | 목적 | 이 프로젝트의 사용 순서 |
+|---|---|---|
+| Smoke Test | 메인 시나리오와 측정 파이프라인이 정상인지 확인 | 가장 먼저 수행 |
+| Load Test | 일정한 정상 부하에서 p95/p99와 결과 분포 확인 | baseline 측정 |
+| Stress Test | 부하를 올리며 한계 지점과 병목 후보 확인 | baseline 이후 수행 |
+| Spike Test | 짧은 시간의 급격한 요청 증가 영향 확인 | stress 이후 수행 |
+| Soak Test | 장시간 부하에서 누수와 누적 악화 확인 | 후순위 |
+
+현재 첫 단계는 k6 smoke test다. 대상 시나리오는 단일 메인 시나리오다.
+
+```text
+BidRequest -> SSP -> DSP 4개 -> SSP 낙찰 판단 -> AuctionResult
+```
+
+Smoke test는 성능 한계를 측정하지 않는다. `status=WINNER`, 기본 topology의 `winnerDspId=dsp-b`, DSP 결과 분포가 기대값과 일치하는지 확인하고, SSP/DSP `/metrics`에 RTB metric이 생성되는지 확인한다.
+
 테스트 축:
 
 | 축 | 관찰 목적 |
