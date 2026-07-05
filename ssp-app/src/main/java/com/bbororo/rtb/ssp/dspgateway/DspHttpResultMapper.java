@@ -7,6 +7,7 @@ import com.bbororo.rtb.ssp.auctionflow.Deadline;
 
 import java.net.http.HttpTimeoutException;
 import java.time.Instant;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeoutException;
 
@@ -59,7 +60,9 @@ public final class DspHttpResultMapper {
 
     private static boolean isTimeout(Throwable throwable) {
         Throwable cause = unwrap(throwable);
-        return cause instanceof TimeoutException || cause instanceof HttpTimeoutException;
+        return cause instanceof TimeoutException
+                || cause instanceof HttpTimeoutException
+                || cause instanceof CancellationException;
     }
 
     private static Throwable unwrap(Throwable throwable) {
