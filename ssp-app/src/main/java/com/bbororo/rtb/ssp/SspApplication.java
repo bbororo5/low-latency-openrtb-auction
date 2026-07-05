@@ -21,11 +21,13 @@ import io.micrometer.prometheusmetrics.PrometheusConfig;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 
 import java.net.URI;
+import java.util.Arrays;
 import java.util.List;
 
 public final class SspApplication {
 
     private static final int DEFAULT_PORT = 8080;
+    private static final String DSP_ENDPOINTS_ENV = "DSP_ENDPOINTS";
 
     private SspApplication() {
     }
@@ -53,7 +55,7 @@ public final class SspApplication {
     private static AuctionFlow auctionFlow(OpenRtbJsonCodec codec, RtbMetrics metrics) {
         var resultMapper = new DspHttpResultMapper(codec);
         var dspGateway = new HttpDspGateway(
-                new StaticDspEndpointRegistry(defaultDspEndpoints()),
+                new StaticDspEndpointRegistry(configuredDspEndpoints()),
                 codec,
                 JdkHttpDspClient.createDefault(),
                 resultMapper,
@@ -66,6 +68,27 @@ public final class SspApplication {
                 new DefaultBidJudge(),
                 new FirstPriceWinnerSelector()
         );
+    }
+
+    private static List<DspEndpoint> configuredDspEndpoints() {
+        String configured = System.getenv(DSP_ENDPOINTS_ENV);
+        if (configured == null || configured.isBlank()) {
+            return defaultDspEndpoints();
+        }
+
+        return Arrays.stream(configured.split(","))
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .map(SspApplication::endpointFromConfig)
+                .toList();
+    }
+
+    private static DspEndpoint endpointFromConfig(String value) {
+        String[] parts = value.split("=", 2);
+        if (parts.length != 2 || parts[0].isBlank() || parts[1].isBlank()) {
+            throw new IllegalArgumentException("Invalid DSP endpoint config: " + value);
+        }
+        return new DspEndpoint(parts[0].trim(), URI.create(parts[1].trim()));
     }
 
     private static List<DspEndpoint> defaultDspEndpoints() {
