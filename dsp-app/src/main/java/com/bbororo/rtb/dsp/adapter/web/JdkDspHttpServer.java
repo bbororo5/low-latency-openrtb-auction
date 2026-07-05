@@ -14,12 +14,19 @@ public final class JdkDspHttpServer {
     private final HttpServer server;
 
     public JdkDspHttpServer(int port, HttpHandler bidHandler) {
-        this(createServer(port), bidHandler);
+        this(createServer(port), bidHandler, null);
     }
 
-    JdkDspHttpServer(HttpServer server, HttpHandler bidHandler) {
+    public JdkDspHttpServer(int port, HttpHandler bidHandler, HttpHandler metricsHandler) {
+        this(createServer(port), bidHandler, metricsHandler);
+    }
+
+    JdkDspHttpServer(HttpServer server, HttpHandler bidHandler, HttpHandler metricsHandler) {
         this.server = Objects.requireNonNull(server, "server must not be null");
         this.server.createContext(BID_PATH, Objects.requireNonNull(bidHandler, "bidHandler must not be null"));
+        if (metricsHandler != null) {
+            this.server.createContext("/metrics", metricsHandler);
+        }
     }
 
     public void start() {

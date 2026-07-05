@@ -17,11 +17,32 @@ class DspModuleArchitectureTest {
 
         ArchRule rule = classes()
                 .that().resideInAPackage("com.bbororo.rtb.dsp..")
+                .and().doNotHaveSimpleName("DspApplication")
                 .should().onlyDependOnClassesThat()
                 .resideInAnyPackage(
                         "com.bbororo.rtb.dsp..",
                         "com.bbororo.rtb.shared..",
                         "com.sun.net.httpserver..",
+                        "java.."
+                )
+                .allowEmptyShould(true);
+
+        rule.check(classes);
+    }
+
+    @Test
+    void dsp_application_may_wire_micrometer_runtime_dependencies() {
+        var classes = new ClassFileImporter()
+                .withImportOption(new ImportOption.DoNotIncludeTests())
+                .importPackages("com.bbororo.rtb.dsp");
+
+        ArchRule rule = classes()
+                .that().haveSimpleName("DspApplication")
+                .should().onlyDependOnClassesThat()
+                .resideInAnyPackage(
+                        "com.bbororo.rtb.dsp..",
+                        "com.bbororo.rtb.shared..",
+                        "io.micrometer..",
                         "java.."
                 )
                 .allowEmptyShould(true);
