@@ -1,0 +1,35 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: "rtb-ssp"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets:
+          - "ssp:8080"
+        labels:
+          app: "ssp"
+
+  - job_name: "rtb-dsp"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets:
+          - "dsp-a:8081"
+        labels:
+          app: "dsp"
+          dsp_id: "dsp-a"
+      - targets:
+          - "dsp-b:8081"
+        labels:
+          app: "dsp"
+          dsp_id: "dsp-b"
+      - targets:
+          - "dsp-c:8081"
+        labels:
+          app: "dsp"
+          dsp_id: "dsp-c"
+      - targets:
+          - "dsp-d:8081"
+        labels:
+          app: "dsp"
+          dsp_id: "dsp-d"

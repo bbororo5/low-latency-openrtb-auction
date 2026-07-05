@@ -1,0 +1,94 @@
+services:
+  ssp:
+    build:
+      context: .
+      args:
+        APP_MODULE: ssp-app
+    environment:
+      DSP_ENDPOINTS: >-
+        dsp-a=http://dsp-a:8081/openrtb/bid,
+        dsp-b=http://dsp-b:8081/openrtb/bid,
+        dsp-c=http://dsp-c:8081/openrtb/bid,
+        dsp-d=http://dsp-d:8081/openrtb/bid
+    command: ["8080"]
+    ports:
+      - "8080:8080"
+    depends_on:
+      - dsp-a
+      - dsp-b
+      - dsp-c
+      - dsp-d
+
+  dsp-a:
+    build:
+      context: .
+      args:
+        APP_MODULE: dsp-app
+    command: ["dsp-a", "8081", "normal-medium"]
+    ports:
+      - "8081:8081"
+
+  dsp-b:
+    build:
+      context: .
+      args:
+        APP_MODULE: dsp-app
+    command: ["dsp-b", "8081", "normal-high"]
+    ports:
+      - "8082:8081"
+
+  dsp-c:
+    build:
+      context: .
+      args:
+        APP_MODULE: dsp-app
+    command: ["dsp-c", "8081", "no-bid"]
+    ports:
+      - "8083:8081"
+
+  dsp-d:
+    build:
+      context: .
+      args:
+        APP_MODULE: dsp-app
+    command: ["dsp-d", "8081", "timeout"]
+    ports:
+      - "8084:8081"
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.perf.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - ssp
+      - dsp-a
+      - dsp-b
+      - dsp-c
+      - dsp-d
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+
+  k6-smoke:
+    image: grafana/k6:1.2.1
+    profiles:
+      - test
+    environment:
+      BASE_URL: http://ssp:8080
+    volumes:
+      - ./performance/k6:/scripts:ro
+    command: ["run", "/scripts/smoke.js"]
+    depends_on:
+      - ssp

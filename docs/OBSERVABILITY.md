@@ -144,3 +144,27 @@ histogram_quantile(0.95, rate(rtb_ssp_auction_duration_seconds_bucket[1m]))
 ```promql
 histogram_quantile(0.99, rate(rtb_ssp_dsp_call_duration_seconds_bucket[1m]))
 ```
+
+## 8. Docker Compose Performance Environment
+
+성능 테스트의 재현성을 높이기 위해 SSP, DSP, Prometheus, Grafana, k6를 하나의 Compose topology로 실행할 수 있다.
+
+```bash
+docker compose -f docker-compose.perf.yml up --build -d ssp prometheus grafana
+```
+
+```bash
+docker compose -f docker-compose.perf.yml --profile test run --rm k6-smoke
+```
+
+이 환경의 목적은 production benchmark가 아니라 local baseline measurement다. 모든 컨테이너가 같은 로컬 머신 자원을 공유하므로 절대 성능 보장으로 해석하지 않는다.
+
+Compose 환경에서는 Prometheus가 Docker network 내부 service name으로 scrape한다.
+
+| Target | Purpose |
+|---|---|
+| `ssp:8080/metrics` | SSP auction metrics |
+| `dsp-a:8081/metrics` | DSP-A metrics |
+| `dsp-b:8081/metrics` | DSP-B metrics |
+| `dsp-c:8081/metrics` | DSP-C metrics |
+| `dsp-d:8081/metrics` | DSP-D metrics |

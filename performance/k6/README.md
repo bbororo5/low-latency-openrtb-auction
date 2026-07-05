@@ -14,21 +14,37 @@
 
 ## Smoke Test
 
-전제:
+Docker Compose 기반 성능 실험 환경을 먼저 실행한다.
 
-- SSP: `localhost:8080`
-- DSP-A: `localhost:8081`, `normal-medium`
-- DSP-B: `localhost:8082`, `normal-high`
-- DSP-C: `localhost:8083`, `no-bid`
-- DSP-D: `localhost:8084`, `timeout`
+```bash
+docker compose -f docker-compose.perf.yml up --build -d ssp prometheus grafana
+```
 
-실행:
+Compose topology:
+
+| Service | Container Port | Host Port | Mode |
+|---|---:|---:|---|
+| `ssp` | `8080` | `8080` | auction endpoint |
+| `dsp-a` | `8081` | `8081` | `normal-medium` |
+| `dsp-b` | `8081` | `8082` | `normal-high` |
+| `dsp-c` | `8081` | `8083` | `no-bid` |
+| `dsp-d` | `8081` | `8084` | `timeout` |
+| `prometheus` | `9090` | `9090` | metrics scrape |
+| `grafana` | `3000` | `3000` | dashboard |
+
+컨테이너에서 k6 smoke 실행:
+
+```bash
+docker compose -f docker-compose.perf.yml --profile test run --rm k6-smoke
+```
+
+로컬에 k6가 설치되어 있다면 host port를 통해 직접 실행할 수도 있다.
 
 ```bash
 k6 run performance/k6/smoke.js
 ```
 
-SSP 주소를 바꾸려면:
+SSP 주소를 바꾸려면 다음 환경변수를 사용한다.
 
 ```bash
 BASE_URL=http://localhost:8080 k6 run performance/k6/smoke.js
@@ -42,3 +58,9 @@ BASE_URL=http://localhost:8080 k6 run performance/k6/smoke.js
 - DSP 결과 분포가 `bid=2`, `no-bid=1`, `timeout=1`인지
 
 이 smoke test는 성능 한계를 측정하지 않는다. k6 요청, SSP/DSP 연결, AuctionResult, Prometheus metric 생성이 함께 동작하는지 확인하는 첫 단계다.
+
+정리:
+
+```bash
+docker compose -f docker-compose.perf.yml down
+```
