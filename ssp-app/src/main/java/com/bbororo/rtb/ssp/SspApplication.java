@@ -1,6 +1,7 @@
 package com.bbororo.rtb.ssp;
 
 import com.bbororo.rtb.shared.observability.PrometheusMetricsHttpHandler;
+import com.bbororo.rtb.shared.observability.RtbMetrics;
 import com.bbororo.rtb.shared.openrtb.codec.JacksonOpenRtbJsonCodec;
 import com.bbororo.rtb.shared.openrtb.codec.OpenRtbJsonCodec;
 import com.bbororo.rtb.ssp.adapter.web.JdkSspHttpServer;
@@ -38,23 +39,25 @@ public final class SspApplication {
 
     public static JdkSspHttpServer createServer(int port) {
         PrometheusMeterRegistry registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+        RtbMetrics metrics = new RtbMetrics(registry);
         OpenRtbJsonCodec codec = new JacksonOpenRtbJsonCodec();
-        AuctionFlow auctionFlow = auctionFlow(codec);
+        AuctionFlow auctionFlow = auctionFlow(codec, metrics);
 
         return new JdkSspHttpServer(
                 port,
-                new OpenRtbAuctionHttpHandler(codec, new DefaultRequestHandler(), auctionFlow),
+                new OpenRtbAuctionHttpHandler(codec, new DefaultRequestHandler(), auctionFlow, metrics),
                 new PrometheusMetricsHttpHandler(registry)
         );
     }
 
-    private static AuctionFlow auctionFlow(OpenRtbJsonCodec codec) {
+    private static AuctionFlow auctionFlow(OpenRtbJsonCodec codec, RtbMetrics metrics) {
         var resultMapper = new DspHttpResultMapper(codec);
         var dspGateway = new HttpDspGateway(
                 new StaticDspEndpointRegistry(defaultDspEndpoints()),
                 codec,
                 JdkHttpDspClient.createDefault(),
-                resultMapper
+                resultMapper,
+                metrics
         );
 
         return new DefaultAuctionFlow(

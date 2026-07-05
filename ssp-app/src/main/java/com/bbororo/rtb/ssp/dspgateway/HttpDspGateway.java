@@ -3,6 +3,7 @@ package com.bbororo.rtb.ssp.dspgateway;
 import com.bbororo.rtb.shared.openrtb.BidRequest;
 import com.bbororo.rtb.shared.openrtb.codec.OpenRtbJsonCodec;
 import com.bbororo.rtb.shared.openrtb.codec.OpenRtbJsonCodecException;
+import com.bbororo.rtb.shared.observability.RtbMetrics;
 import com.bbororo.rtb.ssp.auctionflow.Deadline;
 
 import java.time.Duration;
@@ -21,17 +22,20 @@ public final class HttpDspGateway implements DspGateway {
     private final OpenRtbJsonCodec codec;
     private final HttpDspClient httpClient;
     private final DspHttpResultMapper resultMapper;
+    private final RtbMetrics metrics;
 
     public HttpDspGateway(
             DspEndpointRegistry endpointRegistry,
             OpenRtbJsonCodec codec,
             HttpDspClient httpClient,
-            DspHttpResultMapper resultMapper
+            DspHttpResultMapper resultMapper,
+            RtbMetrics metrics
     ) {
         this.endpointRegistry = Objects.requireNonNull(endpointRegistry, "endpointRegistry must not be null");
         this.codec = Objects.requireNonNull(codec, "codec must not be null");
         this.httpClient = Objects.requireNonNull(httpClient, "httpClient must not be null");
         this.resultMapper = Objects.requireNonNull(resultMapper, "resultMapper must not be null");
+        this.metrics = Objects.requireNonNull(metrics, "metrics must not be null");
     }
 
     @Override
@@ -61,10 +65,11 @@ public final class HttpDspGateway implements DspGateway {
         List<DspCallFuture> futures = new ArrayList<>();
         for (DspEndpoint endpoint : endpoints) {
             Duration timeout = remaining(deadline);
+            Instant startedAt = Instant.now();
             CompletableFuture<DspCallResult> future = httpClient.postBidJson(endpoint, jsonBody, timeout)
                     .thenApply(response -> resultMapper.fromResponse(response, deadline))
                     .exceptionally(error -> resultMapper.fromFailure(endpoint, error, Instant.now()));
-            futures.add(new DspCallFuture(endpoint, future));
+            futures.add(new DspCallFuture(endpoint, startedAt, future));
         }
         return futures;
     }
@@ -90,9 +95,21 @@ public final class HttpDspGateway implements DspGateway {
         List<DspCallResult> results = new ArrayList<>();
         for (DspCallFuture future : futures) {
             if (future.future().isDone() && !future.future().isCancelled()) {
-                results.add(future.future().join());
+                DspCallResult result = future.future().join();
+                metrics.recordSspDspCall(
+                        Duration.between(future.startedAt(), result.receivedAt()),
+                        result.dspId(),
+                        result.status().name()
+                );
+                results.add(result);
             } else {
-                results.add(resultMapper.fromFailure(future.endpoint(), new TimeoutException(), Instant.now()));
+                DspCallResult result = resultMapper.fromFailure(future.endpoint(), new TimeoutException(), Instant.now());
+                metrics.recordSspDspCall(
+                        Duration.between(future.startedAt(), result.receivedAt()),
+                        result.dspId(),
+                        result.status().name()
+                );
+                results.add(result);
             }
         }
         return List.copyOf(results);
@@ -125,6 +142,7 @@ public final class HttpDspGateway implements DspGateway {
 
     private record DspCallFuture(
             DspEndpoint endpoint,
+            Instant startedAt,
             CompletableFuture<DspCallResult> future
     ) {
     }

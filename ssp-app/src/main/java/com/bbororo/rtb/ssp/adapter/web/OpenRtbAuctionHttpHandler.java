@@ -1,6 +1,9 @@
 package com.bbororo.rtb.ssp.adapter.web;
 
 import com.bbororo.rtb.shared.openrtb.BidRequest;
+import com.bbororo.rtb.shared.openrtb.Imp;
+import com.bbororo.rtb.shared.observability.RtbMetricTags;
+import com.bbororo.rtb.shared.observability.RtbMetrics;
 import com.bbororo.rtb.shared.openrtb.codec.OpenRtbJsonCodec;
 import com.bbororo.rtb.shared.openrtb.codec.OpenRtbJsonCodecException;
 import com.bbororo.rtb.ssp.auctionflow.AuctionCommand;
@@ -20,6 +23,7 @@ import com.sun.net.httpserver.HttpHandler;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 
@@ -34,29 +38,36 @@ public final class OpenRtbAuctionHttpHandler implements HttpHandler {
     private final RequestHandler requestHandler;
     private final AuctionFlow auctionFlow;
     private final ObjectMapper objectMapper;
+    private final RtbMetrics metrics;
 
     public OpenRtbAuctionHttpHandler(
             OpenRtbJsonCodec codec,
             RequestHandler requestHandler,
-            AuctionFlow auctionFlow
+            AuctionFlow auctionFlow,
+            RtbMetrics metrics
     ) {
-        this(codec, requestHandler, auctionFlow, new ObjectMapper());
+        this(codec, requestHandler, auctionFlow, metrics, new ObjectMapper());
     }
 
     OpenRtbAuctionHttpHandler(
             OpenRtbJsonCodec codec,
             RequestHandler requestHandler,
             AuctionFlow auctionFlow,
+            RtbMetrics metrics,
             ObjectMapper objectMapper
     ) {
         this.codec = Objects.requireNonNull(codec, "codec must not be null");
         this.requestHandler = Objects.requireNonNull(requestHandler, "requestHandler must not be null");
         this.auctionFlow = Objects.requireNonNull(auctionFlow, "auctionFlow must not be null");
+        this.metrics = Objects.requireNonNull(metrics, "metrics must not be null");
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper must not be null");
     }
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
+        Instant startedAt = Instant.now();
+        String mediaType = RtbMetricTags.UNKNOWN;
+        String result = "error";
         try (exchange) {
             if (!POST.equals(exchange.getRequestMethod())) {
                 sendEmpty(exchange, 405);
@@ -65,6 +76,7 @@ public final class OpenRtbAuctionHttpHandler implements HttpHandler {
 
             Instant receivedAt = Instant.now();
             BidRequest bidRequest = decodeRequest(exchange);
+            mediaType = mediaTypeOf(bidRequest);
             RequestHandlingResult handlingResult = requestHandler.handle(bidRequest, receivedAt);
 
             AuctionResult auctionResult = switch (handlingResult) {
@@ -72,11 +84,15 @@ public final class OpenRtbAuctionHttpHandler implements HttpHandler {
                 case RejectedAuctionRequest rejected -> rejectedResult(rejected);
             };
 
+            result = auctionResult.status().name();
             sendJson(exchange, 200, auctionResult);
         } catch (OpenRtbJsonCodecException e) {
+            result = AuctionResultStatus.INVALID_REQUEST.name();
             sendEmpty(exchange, 400);
         } catch (RuntimeException e) {
             sendEmpty(exchange, 500);
+        } finally {
+            metrics.recordSspAuction(Duration.between(startedAt, Instant.now()), mediaType, result);
         }
     }
 
@@ -103,6 +119,24 @@ public final class OpenRtbAuctionHttpHandler implements HttpHandler {
                 0,
                 EMPTY_SUMMARY
         );
+    }
+
+    private static String mediaTypeOf(BidRequest bidRequest) {
+        if (bidRequest == null || bidRequest.imp() == null || bidRequest.imp().isEmpty()) {
+            return RtbMetricTags.UNKNOWN;
+        }
+
+        Imp imp = bidRequest.imp().getFirst();
+        if (imp.banner() != null) {
+            return "banner";
+        }
+        if (imp.video() != null) {
+            return "video";
+        }
+        if (imp.nativeAd() != null) {
+            return "native";
+        }
+        return RtbMetricTags.UNKNOWN;
     }
 
     private void sendJson(HttpExchange exchange, int statusCode, AuctionResult auctionResult) throws IOException {
