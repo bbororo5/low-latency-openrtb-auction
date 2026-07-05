@@ -17,12 +17,32 @@ class SspModuleArchitectureTest {
 
         ArchRule rule = classes()
                 .that().resideInAPackage("com.bbororo.rtb.ssp..")
+                .and().doNotHaveSimpleName("SspApplication")
                 .should().onlyDependOnClassesThat()
                 .resideInAnyPackage(
                         "com.bbororo.rtb.ssp..",
                         "com.bbororo.rtb.shared..",
                         "com.fasterxml.jackson..",
                         "com.sun.net.httpserver..",
+                        "java.."
+                );
+
+        rule.check(classes);
+    }
+
+    @Test
+    void ssp_application_may_wire_micrometer_runtime_dependencies() {
+        var classes = new ClassFileImporter()
+                .withImportOption(new ImportOption.DoNotIncludeTests())
+                .importPackages("com.bbororo.rtb.ssp");
+
+        ArchRule rule = classes()
+                .that().haveSimpleName("SspApplication")
+                .should().onlyDependOnClassesThat()
+                .resideInAnyPackage(
+                        "com.bbororo.rtb.ssp..",
+                        "com.bbororo.rtb.shared..",
+                        "io.micrometer..",
                         "java.."
                 );
 
