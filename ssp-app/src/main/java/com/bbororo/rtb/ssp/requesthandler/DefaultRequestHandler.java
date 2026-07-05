@@ -19,6 +19,9 @@ public final class DefaultRequestHandler implements RequestHandler {
         if (bidRequest == null || isBlank(bidRequest.id()) || bidRequest.imp() == null || bidRequest.imp().isEmpty()) {
             return reject(RequestRejectionReason.INVALID_REQUEST, "BidRequest must include id and at least one impression.");
         }
+        if (bidRequest.imp().size() != 1) {
+            return reject(RequestRejectionReason.UNSUPPORTED_REQUEST, "Only single-impression BidRequest is supported.");
+        }
         if (bidRequest.at() != null && bidRequest.at() != OPENRTB_FIRST_PRICE) {
             return reject(RequestRejectionReason.UNSUPPORTED_REQUEST, "Only first-price auctions are supported.");
         }

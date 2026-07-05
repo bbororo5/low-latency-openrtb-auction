@@ -22,6 +22,7 @@ class SspModuleArchitectureTest {
                         "com.bbororo.rtb.ssp..",
                         "com.bbororo.rtb.shared..",
                         "com.fasterxml.jackson..",
+                        "com.sun.net.httpserver..",
                         "java.."
                 );
 
