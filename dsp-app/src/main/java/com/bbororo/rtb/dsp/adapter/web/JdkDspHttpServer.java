@@ -6,6 +6,7 @@ import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Objects;
+import java.util.concurrent.Executors;
 
 public final class JdkDspHttpServer {
 
@@ -27,6 +28,7 @@ public final class JdkDspHttpServer {
         if (metricsHandler != null) {
             this.server.createContext("/metrics", metricsHandler);
         }
+        this.server.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
     }
 
     public void start() {
