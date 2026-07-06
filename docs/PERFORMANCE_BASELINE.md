@@ -231,7 +231,40 @@ For each step, record:
 그 다음 최적화 주제는 결과를 보고 정한다.
 후보는 DSP 수 증가, deadline 조건 변화, campaign matching 비용, connection reuse 여부다.
 
-## 7. Current Cloud Measurement Path
+## 7. Capacity Scenario Without Timeout DSP
+
+기존 baseline은 매 요청마다 `dsp-d=timeout`을 포함했다.
+이 구성은 timeout 격리 검증에는 유효하지만, 순수 처리량 한계를 찾기에는 부적절했다.
+
+따라서 timeout DSP를 제외한 capacity 시나리오를 분리했다.
+
+```text
+Capacity: dsp-a normal bid, dsp-b high bid, dsp-c no-bid
+Expected: bid=2, no-bid=1, timeout=0
+```
+
+Grafana Cloud k6 100 VU 조건에서 관찰한 경계:
+
+| RPS | Result | Interpretation |
+|---:|---|---|
+| 150 | warning 없이 성공 | stable candidate |
+| 165 | warning 없이 성공 | highest clean run observed |
+| 180 | VU shortage 경고 | load generator boundary 후보 |
+| 200 | VU shortage 경고 | stable로 보지 않음 |
+| 500 | VU shortage, request timeout, DNS error | target 한계로 단정 불가 |
+
+현재 결론:
+
+```text
+timeout 없는 capacity scenario에서는 165 RPS까지 경고 없이 실행되었다.
+180 RPS부터는 target failure보다 Grafana Cloud k6 100 VU 제한이 먼저 관찰되었다.
+```
+
+상세 기록:
+
+- [Capacity Scenario Stress - 2026-07-06](performance/2026-07-06-capacity-scenario-stress.md)
+
+## 8. Current Cloud Measurement Path
 
 현재 AWS 성능 측정의 기준 경로는 Grafana Cloud k6와 Grafana Cloud Metrics Endpoint다.
 
