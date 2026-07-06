@@ -5,11 +5,7 @@ services:
       args:
         APP_MODULE: ssp-app
     environment:
-      DSP_ENDPOINTS: >-
-        dsp-a=http://dsp-a:8081/openrtb/bid,
-        dsp-b=http://dsp-b:8081/openrtb/bid,
-        dsp-c=http://dsp-c:8081/openrtb/bid,
-        dsp-d=http://dsp-d:8081/openrtb/bid
+      DSP_ENDPOINTS: "${DSP_ENDPOINTS:-dsp-a=http://dsp-a:8081/openrtb/bid,dsp-b=http://dsp-b:8081/openrtb/bid,dsp-c=http://dsp-c:8081/openrtb/bid,dsp-d=http://dsp-d:8081/openrtb/bid}"
     command: ["8080"]
     ports:
       - "8080:8080"
@@ -122,6 +118,22 @@ services:
     volumes:
       - ./performance/k6:/scripts:ro
     command: ["run", "/scripts/load-baseline.js"]
+    depends_on:
+      - ssp
+
+  k6-load-capacity:
+    image: grafana/k6:1.2.1
+    profiles:
+      - test
+    environment:
+      BASE_URL: http://ssp:8080
+      RPS: "${RPS:-10}"
+      DURATION: "${DURATION:-1m}"
+      PRE_ALLOCATED_VUS: "${PRE_ALLOCATED_VUS:-20}"
+      MAX_VUS: "${MAX_VUS:-100}"
+    volumes:
+      - ./performance/k6:/scripts:ro
+    command: ["run", "/scripts/load-capacity.js"]
     depends_on:
       - ssp
 
