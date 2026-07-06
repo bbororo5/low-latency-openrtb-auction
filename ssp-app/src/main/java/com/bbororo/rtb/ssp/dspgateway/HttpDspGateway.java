@@ -15,6 +15,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class HttpDspGateway implements DspGateway {
 
@@ -66,12 +67,13 @@ public final class HttpDspGateway implements DspGateway {
         for (DspEndpoint endpoint : endpoints) {
             Duration timeout = remaining(deadline);
             Instant startedAt = Instant.now();
+            AtomicBoolean inflight = new AtomicBoolean(true);
             metrics.incrementSspDspInflightCalls();
             CompletableFuture<DspCallResult> future = httpClient.postBidJson(endpoint, jsonBody, timeout)
                     .thenApply(response -> resultMapper.fromResponse(response, deadline))
                     .exceptionally(error -> resultMapper.fromFailure(endpoint, error, Instant.now()))
-                    .whenComplete((result, error) -> metrics.decrementSspDspInflightCalls());
-            futures.add(new DspCallFuture(endpoint, startedAt, future));
+                    .whenComplete((result, error) -> releaseInflight(inflight));
+            futures.add(new DspCallFuture(endpoint, startedAt, future, inflight));
         }
         return futures;
     }
@@ -117,11 +119,19 @@ public final class HttpDspGateway implements DspGateway {
         return List.copyOf(results);
     }
 
-    private static void cancelIncomplete(List<DspCallFuture> futures) {
+    private void cancelIncomplete(List<DspCallFuture> futures) {
         for (DspCallFuture future : futures) {
             if (!future.future().isDone()) {
-                future.future().cancel(true);
+                if (future.future().cancel(true)) {
+                    releaseInflight(future.inflight());
+                }
             }
+        }
+    }
+
+    private void releaseInflight(AtomicBoolean inflight) {
+        if (inflight.compareAndSet(true, false)) {
+            metrics.decrementSspDspInflightCalls();
         }
     }
 
@@ -145,7 +155,8 @@ public final class HttpDspGateway implements DspGateway {
     private record DspCallFuture(
             DspEndpoint endpoint,
             Instant startedAt,
-            CompletableFuture<DspCallResult> future
+            CompletableFuture<DspCallResult> future,
+            AtomicBoolean inflight
     ) {
     }
 }
