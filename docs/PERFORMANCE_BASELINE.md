@@ -71,7 +71,13 @@ Observed results:
 
 The current implementation preserves auction correctness at 10 RPS, but latency degrades sharply between 5 RPS and 10 RPS in the local Compose environment.
 
-This means the next performance work should not jump directly to higher RPS. The next step is to identify the hot-path bottleneck before defining an ambitious target traffic number.
+Prometheus metrics showed that SSP internal auction duration stayed around `132ms` while k6 end-to-end p95 reached seconds. This suggests that the sharp latency increase is likely outside the core RTB auction logic, around the local Docker/k6/HTTP server boundary.
+
+Detailed investigation note:
+
+- [Local Compose Load Investigation - 2026-07-06](performance/2026-07-06-local-compose-load-investigation.md)
+
+This means the next performance work should not jump directly to higher RPS or local HTTP server tuning. The next step is to separate the target system from the load generator and rerun the same scenario.
 
 Likely investigation points:
 
@@ -98,4 +104,4 @@ For each step, record:
 - SSP -> DSP call p95/p99 from Prometheus
 - DSP result distribution
 
-After this narrower sweep, define the first local target traffic and latency goal.
+After external target-system measurement, define the first target traffic and latency goal.
