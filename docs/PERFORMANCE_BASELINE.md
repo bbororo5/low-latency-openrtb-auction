@@ -1,8 +1,8 @@
 # Performance Baseline
 
-이 문서는 Docker Compose 기반 로컬 성능 실험 환경에서 관찰한 load capacity baseline을 기록한다.
+이 문서는 성능 실험 환경을 단계적으로 분리하며 관찰한 load capacity baseline을 기록한다.
 
-이 결과는 production benchmark가 아니다. k6, SSP, DSP, Prometheus, Grafana가 같은 로컬 머신 자원을 공유하므로 절대 처리량 보장으로 해석하지 않는다.
+이 결과는 production benchmark가 아니다. 각 측정값은 해당 부하 발생기, 네트워크 경로, target system 배포 조건 안에서만 해석한다.
 
 ## 1. Test Environment
 
@@ -230,3 +230,57 @@ For each step, record:
 
 그 다음 최적화 주제는 결과를 보고 정한다.
 후보는 DSP 수 증가, deadline 조건 변화, campaign matching 비용, connection reuse 여부다.
+
+## 7. Current Cloud Measurement Path
+
+현재 AWS 성능 측정의 기준 경로는 Grafana Cloud k6와 Grafana Cloud Metrics Endpoint다.
+
+```text
+Grafana Cloud k6
+ -> AWS EC2 Caddy HTTPS
+ -> SSP
+ -> DSP-A/B/C/D
+```
+
+```text
+Grafana Cloud Metrics Endpoint
+ -> AWS EC2 Caddy HTTPS /metrics/*
+ -> SSP/DSP metrics endpoints
+```
+
+EC2에는 target system과 HTTPS reverse proxy만 남긴다.
+
+| Component | Current role |
+|---|---|
+| Grafana Cloud k6 | 부하 발생기 |
+| Grafana Cloud Metrics Endpoint | metrics scraper |
+| Grafana Cloud metrics storage | Prometheus-compatible metrics store |
+| AWS EC2 | SSP/DSP target system |
+| Caddy | HTTPS endpoint and metrics Basic Auth |
+
+Initial verification:
+
+| Test | Run URL | Status |
+|---|---|---|
+| Cloud smoke | `https://curiouscicada2096.grafana.net/a/k6-app/runs/8041428` | `Finished` |
+| Cloud 10 RPS baseline | `https://curiouscicada2096.grafana.net/a/k6-app/runs/8041454` | `Finished` |
+
+Metrics Endpoint status:
+
+```promql
+up{scrape_job=~"rtb-.*"}
+```
+
+All five jobs are `up=1`:
+
+- `rtb-ssp`
+- `rtb-dsp-a`
+- `rtb-dsp-b`
+- `rtb-dsp-c`
+- `rtb-dsp-d`
+
+Detailed note:
+
+- [Grafana Cloud k6 Baseline - 2026-07-06](performance/2026-07-06-grafana-cloud-k6-baseline.md)
+
+Future capacity claims should use Grafana Cloud k6 run pages as the source of truth for request rate, failed request rate, checks, p95/p99 latency, and load zone.
