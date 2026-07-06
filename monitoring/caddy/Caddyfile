@@ -1,27 +1,38 @@
+(metrics_auth) {
+  basic_auth {
+    grafana $2a$14$ZsfxGFBK8WMINDVfL6HsR.2412Qf5CNT7NRzp6.9twkxeCTyoNbau
+  }
+}
+
 13-125-82-244.sslip.io {
   reverse_proxy /openrtb/* ssp:8080
 
   handle /metrics/ssp {
+    import metrics_auth
     rewrite * /metrics
     reverse_proxy ssp:8080
   }
 
   handle /metrics/dsp-a {
+    import metrics_auth
     rewrite * /metrics
     reverse_proxy dsp-a:8081
   }
 
   handle /metrics/dsp-b {
+    import metrics_auth
     rewrite * /metrics
     reverse_proxy dsp-b:8081
   }
 
   handle /metrics/dsp-c {
+    import metrics_auth
     rewrite * /metrics
     reverse_proxy dsp-c:8081
   }
 
   handle /metrics/dsp-d {
+    import metrics_auth
     rewrite * /metrics
     reverse_proxy dsp-d:8081
   }
