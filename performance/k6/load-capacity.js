@@ -6,6 +6,7 @@ const RPS = Number(__ENV.RPS || 10);
 const DURATION = __ENV.DURATION || "1m";
 const PRE_ALLOCATED_VUS = Number(__ENV.PRE_ALLOCATED_VUS || Math.max(10, RPS));
 const MAX_VUS = Number(__ENV.MAX_VUS || Math.max(50, RPS * 2));
+const HOST_ALIAS = __ENV.HOST_ALIAS || "";
 
 export const options = {
   summaryTrendStats: ["avg", "min", "med", "max", "p(90)", "p(95)", "p(99)"],
@@ -23,6 +24,7 @@ export const options = {
     checks: ["rate==1.0"],
     http_req_failed: ["rate==0"],
   },
+  hosts: hostAliases(),
 };
 
 export default function () {
@@ -71,4 +73,18 @@ export default function () {
     "no invalid bids": () => body.dspResultCounts?.invalidBidCount === 0,
     "no dsp errors": () => body.dspResultCounts?.errorCount === 0,
   });
+}
+
+function hostAliases() {
+  if (!HOST_ALIAS) {
+    return {};
+  }
+
+  const [hostname, address] = HOST_ALIAS.split("=");
+  if (!hostname || !address) {
+    throw new Error("HOST_ALIAS must use hostname=address format");
+  }
+  return {
+    [hostname.trim()]: address.trim(),
+  };
 }
