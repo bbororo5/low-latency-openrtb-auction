@@ -7,3 +7,7 @@ out/
 *.iml
 
 .DS_Store
+
+.env.grafana-cloud
+.secrets/
+monitoring/prometheus/prometheus.cloud.yml

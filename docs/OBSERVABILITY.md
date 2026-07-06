@@ -115,6 +115,19 @@ SSP / DSP
 
 Spring Boot Actuator is not used in the baseline. Micrometer is used directly so that Prometheus/Grafana integration remains possible while keeping the HTTP server stack small.
 
+Cloud observability path for AWS performance tests:
+
+```text
+SSP / DSP on AWS EC2
+ -> /metrics
+ -> Prometheus on the same EC2
+ -> remote_write
+ -> Grafana Cloud Prometheus
+ -> Grafana Cloud dashboard
+```
+
+Grafana Cloud is used as the external monitoring UI and metrics store. Prometheus remains close to the target system as the scraper so that SSP/DSP containers do not need to expose each metrics endpoint to the public internet.
+
 ## 7. Local Monitoring Setup
 
 SSP와 DSP 애플리케이션은 로컬 JVM 프로세스로 실행하고, Prometheus/Grafana만 Docker Compose로 실행한다.
@@ -168,3 +181,46 @@ Compose 환경에서는 Prometheus가 Docker network 내부 service name으로 s
 | `dsp-b:8081/metrics` | DSP-B metrics |
 | `dsp-c:8081/metrics` | DSP-C metrics |
 | `dsp-d:8081/metrics` | DSP-D metrics |
+
+## 9. Grafana Cloud Monitoring
+
+AWS 성능 측정에서는 Grafana UI를 EC2에 함께 띄우지 않고 Grafana Cloud를 사용한다.
+
+Repository에는 비밀값이 없는 템플릿만 둔다.
+
+```text
+monitoring/prometheus/prometheus.cloud.yml.template
+docker-compose.cloud-monitoring.yml
+```
+
+실제 배포 파일은 Git에 커밋하지 않는다.
+
+```bash
+cp monitoring/prometheus/prometheus.cloud.yml.template monitoring/prometheus/prometheus.cloud.yml
+mkdir -p .secrets
+printf '%s' '<Grafana Cloud Access Policy Token>' > .secrets/grafana_cloud_api_token
+chmod 600 .secrets/grafana_cloud_api_token
+```
+
+Cloud monitoring compose override:
+
+```bash
+docker compose \
+  -f docker-compose.perf.yml \
+  -f docker-compose.cloud-monitoring.yml \
+  up --build -d ssp prometheus
+```
+
+Grafana Cloud로 전송되는 metric에는 다음 external labels를 붙인다.
+
+| Label | Value |
+|---|---|
+| `project` | `low-latency-openrtb-auction` |
+| `environment` | `aws-perf` |
+| `service_group` | `rtb` |
+
+Grafana Cloud에서 이 프로젝트 metric만 확인할 때는 다음 label filter를 사용한다.
+
+```promql
+{project="low-latency-openrtb-auction", environment="aws-perf"}
+```

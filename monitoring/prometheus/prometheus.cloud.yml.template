@@ -1,0 +1,45 @@
+global:
+  scrape_interval: 5s
+  external_labels:
+    project: "low-latency-openrtb-auction"
+    environment: "aws-perf"
+    service_group: "rtb"
+
+scrape_configs:
+  - job_name: "rtb-ssp"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets:
+          - "ssp:8080"
+        labels:
+          app: "ssp"
+
+  - job_name: "rtb-dsp"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets:
+          - "dsp-a:8081"
+        labels:
+          app: "dsp"
+          dsp_id: "dsp-a"
+      - targets:
+          - "dsp-b:8081"
+        labels:
+          app: "dsp"
+          dsp_id: "dsp-b"
+      - targets:
+          - "dsp-c:8081"
+        labels:
+          app: "dsp"
+          dsp_id: "dsp-c"
+      - targets:
+          - "dsp-d:8081"
+        labels:
+          app: "dsp"
+          dsp_id: "dsp-d"
+
+remote_write:
+  - url: "https://prometheus-prod-49-prod-ap-northeast-0.grafana.net/api/prom/push"
+    basic_auth:
+      username: "3342832"
+      password_file: "/run/secrets/grafana_cloud_api_token"
