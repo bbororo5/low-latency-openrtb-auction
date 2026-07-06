@@ -177,6 +177,17 @@ Prometheus 기준 SSP 내부 경매 시간은 다음과 같다.
 `150 RPS`부터는 경매 결과가 틀어진 것이 아니라, k6가 SSP에 연결을 여는 단계에서 `dial: i/o timeout`을 기록했다.
 따라서 이 구간은 경매 로직 자체의 실패라기보다 외부 연결, 네트워크, 서버 accept 계층의 한계 후보로 본다.
 
+추가 확인을 위해 k6를 AWS 내부 Compose network에서 실행했다.
+이 경우 public internet과 local Mac Docker 경로가 제거된다.
+
+| Load generator path | RPS | Duration | Requests | Checks | Failed | p95 | p99 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| AWS internal Docker network | 150 | 30s | 4,500 | 100% | 0% | 120.12ms | 121.76ms |
+| AWS internal Docker network | 200 | 30s | 6,001 | 100% | 0% | 120.05ms | 121.07ms |
+
+따라서 현재 증거만으로는 target system 자체가 `150 RPS`에서 실패했다고 볼 수 없다.
+외부 테스트의 실패는 local Mac Docker, public network, client connection 생성 경로의 영향일 가능성이 높다.
+
 ### Interpretation
 
 이 기준선은 다음 상태를 의미한다.
@@ -191,6 +202,7 @@ Prometheus 기준 SSP 내부 경매 시간은 다음과 같다.
 상세 조사 기록:
 
 - [AWS HttpServer Executor Investigation - 2026-07-06](performance/2026-07-06-aws-httpserver-executor-investigation.md)
+- [Load Generator Path Investigation - 2026-07-06](performance/2026-07-06-load-generator-path-investigation.md)
 
 ## 6. Next Measurement Steps
 
