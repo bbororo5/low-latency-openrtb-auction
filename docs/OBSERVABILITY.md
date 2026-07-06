@@ -225,6 +225,21 @@ Grafana Cloud에서 이 프로젝트 metric만 확인할 때는 다음 label fil
 {project="low-latency-openrtb-auction", environment="aws-perf"}
 ```
 
+현재 Grafana Cloud Metrics Endpoint는 `scrape_job` label을 기준으로도 조회할 수 있다.
+대시보드 import JSON은 현재 수집 label에 맞춰 `scrape_job`을 사용한다.
+
+| Dashboard | File | Purpose |
+|---|---|---|
+| RTB Auction Overview | `monitoring/grafana/cloud/rtb-auction-overview.import.json` | 경매 결과, SSP/DSP 지연, DSP 결과 분포 확인 |
+| RTB Runtime Saturation | `monitoring/grafana/cloud/rtb-runtime-saturation.import.json` | JVM thread, CPU, heap, GC, SSP in-flight DSP call 확인 |
+
+두 대시보드는 역할이 다르다.
+
+```text
+Auction Overview: 경매가 깨졌는가?
+Runtime Saturation: 왜 깨졌는가?
+```
+
 ## 10. Grafana Cloud k6
 
 성능 측정용 부하 발생기는 Grafana Cloud k6를 사용한다.
