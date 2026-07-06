@@ -125,11 +125,11 @@ DSP behavior:
 
 ### Baseline Criteria
 
-현재 기준선은 `10 RPS / 30s`로 정한다.
+현재 기준선은 `100 RPS / 30s`로 정한다.
 
 | Item | Criteria |
 |---|---:|
-| Request rate | `10 RPS` |
+| Request rate | `100 RPS` |
 | Duration | `30s` |
 | HTTP failure rate | `0%` |
 | k6 checks | `100%` |
@@ -142,19 +142,17 @@ DSP behavior:
 p95는 대부분의 요청이 어느 정도 시간 안에 끝나는지 보는 값이다.
 p99는 거의 모든 요청이 어느 정도 시간 안에 끝나는지 보는 값이다.
 
-### Observed Result
+### Load Step Results
 
-JDK HttpServer executor 설정 후 AWS 대상 시스템에서 측정한 결과는 다음과 같다.
+JDK HttpServer executor 설정 후 AWS 대상 시스템에서 부하를 단계적으로 올려 측정했다.
 
-| Metric | Observed |
-|---|---:|
-| Requests | `301` |
-| Observed throughput | `9.98 RPS` |
-| HTTP failure rate | `0%` |
-| k6 checks | `100%` |
-| p95 latency | `171.74ms` |
-| p99 latency | `203.55ms` |
-| dropped iterations | `0` |
+| RPS | Duration | Requests | Checks | Failed | p95 | p99 | Dropped | Result |
+|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| 10 | 30s | 301 | 100% | 0% | 171.74ms | 203.55ms | 0 | stable |
+| 20 | 30s | 601 | 100% | 0% | 153.76ms | 186.50ms | 0 | stable |
+| 30 | 30s | 901 | 100% | 0% | 160.52ms | 321.71ms | 0 | stable with p99 spike |
+| 50 | 30s | 1,500 | 100% | 0% | 154.59ms | 204.09ms | 0 | stable |
+| 100 | 30s | 3,001 | 100% | 0% | 152.71ms | 180.79ms | 0 | stable |
 
 Prometheus 기준 SSP 내부 경매 시간은 다음과 같다.
 
@@ -167,15 +165,28 @@ Prometheus 기준 SSP 내부 경매 시간은 다음과 같다.
 정상 bid를 반환하는 DSP 호출은 p95 기준 약 `16ms` 안쪽이었다.
 의도적으로 timeout되는 `dsp-d`는 경매 deadline 근처에서 timeout 처리되었다.
 
+### Stress Boundary Observation
+
+`100 RPS` 이후에는 한계 지점을 찾기 위해 `150 RPS`, `200 RPS`를 실행했다.
+
+| RPS | Duration | Requests | Checks | Failed | p95 | p99 | Main symptom |
+|---:|---:|---:|---:|---:|---:|---:|---|
+| 150 | 30s | 4,501 | 99.93% | 0.06% | 202.45ms | 330.50ms | `dial: i/o timeout` 3건 |
+| 200 | 30s | 6,000 | 99.10% | 0.89% | 153.67ms | 180.31ms | `dial: i/o timeout` 54건 |
+
+`150 RPS`부터는 경매 결과가 틀어진 것이 아니라, k6가 SSP에 연결을 여는 단계에서 `dial: i/o timeout`을 기록했다.
+따라서 이 구간은 경매 로직 자체의 실패라기보다 외부 연결, 네트워크, 서버 accept 계층의 한계 후보로 본다.
+
 ### Interpretation
 
 이 기준선은 다음 상태를 의미한다.
 
 - AWS 서버 1대에서 SSP 1개와 DSP 4개를 실행한다.
-- 내 컴퓨터에서 초당 10개 요청을 30초 동안 보낸다.
+- 내 컴퓨터에서 초당 100개 요청을 30초 동안 보낸다.
 - 모든 요청은 정상 경매 결과를 반환한다.
 - p95는 `200ms` 이하, p99는 `250ms` 이하로 유지된다.
 - 이후 성능 변경은 이 기준선과 비교한다.
+- `150 RPS`부터는 연결 timeout이 발생하므로 안정 기준선으로 보지 않는다.
 
 상세 조사 기록:
 
@@ -183,12 +194,15 @@ Prometheus 기준 SSP 내부 경매 시간은 다음과 같다.
 
 ## 6. Next Measurement Steps
 
-다음 단계는 더 큰 요청량에서 어디서부터 느려지는지 확인하는 것이다.
+다음 단계는 `150 RPS` 이상에서 발생한 연결 timeout의 원인을 분리하는 것이다.
 
-Recommended next measurements:
+Recommended investigation points:
 
 ```text
-20 RPS -> 30 RPS -> 50 RPS -> 100 RPS
+client-side k6 connection behavior
+EC2 network/socket queue
+JDK HttpServer accept behavior
+host-level CPU and network saturation
 ```
 
 For each step, record:
@@ -197,9 +211,10 @@ For each step, record:
 - k6 checks
 - k6 observed throughput
 - dropped iterations
+- connection timeout count
 - SSP auction p95/p99 from Prometheus
 - SSP -> DSP call p95/p99 from Prometheus
 - DSP result distribution
 
-이후 최적화 주제는 결과를 보고 정한다.
+그 다음 최적화 주제는 결과를 보고 정한다.
 후보는 DSP 수 증가, deadline 조건 변화, campaign matching 비용, connection reuse 여부다.
