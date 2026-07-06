@@ -55,6 +55,22 @@ services:
     ports:
       - "8084:8081"
 
+  caddy:
+    image: caddy:2.8.4
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./monitoring/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - ssp
+      - dsp-a
+      - dsp-b
+      - dsp-c
+      - dsp-d
+
   prometheus:
     image: prom/prometheus:v2.55.1
     ports:
@@ -108,3 +124,7 @@ services:
     command: ["run", "/scripts/load-baseline.js"]
     depends_on:
       - ssp
+
+volumes:
+  caddy_data:
+  caddy_config:

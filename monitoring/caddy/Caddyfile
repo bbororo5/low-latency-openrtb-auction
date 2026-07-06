@@ -1,0 +1,28 @@
+13-125-82-244.sslip.io {
+  reverse_proxy /openrtb/* ssp:8080
+
+  handle /metrics/ssp {
+    rewrite * /metrics
+    reverse_proxy ssp:8080
+  }
+
+  handle /metrics/dsp-a {
+    rewrite * /metrics
+    reverse_proxy dsp-a:8081
+  }
+
+  handle /metrics/dsp-b {
+    rewrite * /metrics
+    reverse_proxy dsp-b:8081
+  }
+
+  handle /metrics/dsp-c {
+    rewrite * /metrics
+    reverse_proxy dsp-c:8081
+  }
+
+  handle /metrics/dsp-d {
+    rewrite * /metrics
+    reverse_proxy dsp-d:8081
+  }
+}

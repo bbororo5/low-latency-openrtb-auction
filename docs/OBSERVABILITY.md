@@ -109,8 +109,9 @@ SSP / DSP
  -> JDK HttpServer
  -> Micrometer Timer/Counter
  -> /metrics
- -> Prometheus
- -> Grafana
+ -> Grafana Cloud Metrics Endpoint
+ -> Grafana Cloud Prometheus-compatible metrics
+ -> Grafana Cloud dashboard
 ```
 
 Spring Boot Actuator is not used in the baseline. Micrometer is used directly so that Prometheus/Grafana integration remains possible while keeping the HTTP server stack small.
@@ -119,14 +120,16 @@ Cloud observability path for AWS performance tests:
 
 ```text
 SSP / DSP on AWS EC2
- -> /metrics
- -> Prometheus on the same EC2
- -> remote_write
+ -> Caddy HTTPS endpoint
+ -> /metrics/*
+ -> Grafana Cloud Metrics Endpoint
  -> Grafana Cloud Prometheus
  -> Grafana Cloud dashboard
 ```
 
-Grafana Cloud is used as the external monitoring UI and metrics store. Prometheus remains close to the target system as the scraper so that SSP/DSP containers do not need to expose each metrics endpoint to the public internet.
+Grafana Cloud is used as the scraper, metrics store, and dashboard UI. EC2 runs the target system containers and a small HTTPS reverse proxy.
+
+The trade-off is that metrics endpoints must be reachable from Grafana Cloud over HTTPS. Caddy provides the HTTPS endpoint and routes public metrics paths to internal SSP/DSP containers.
 
 ## 7. Local Monitoring Setup
 
@@ -160,60 +163,45 @@ histogram_quantile(0.99, rate(rtb_ssp_dsp_call_duration_seconds_bucket[1m]))
 
 ## 8. Docker Compose Performance Environment
 
-성능 테스트의 재현성을 높이기 위해 SSP, DSP, Prometheus, Grafana, k6를 하나의 Compose topology로 실행할 수 있다.
+성능 테스트 대상 시스템은 SSP, DSP, Caddy 컨테이너만 실행한다.
 
 ```bash
-docker compose -f docker-compose.perf.yml up --build -d ssp prometheus grafana
+docker compose -f docker-compose.perf.yml up --build -d caddy
 ```
+
+`caddy`는 `ssp`, `dsp-a`, `dsp-b`, `dsp-c`, `dsp-d`에 의존하므로 Compose가 target system 컨테이너도 함께 실행한다.
 
 ```bash
 docker compose -f docker-compose.perf.yml --profile test run --rm k6-smoke
 ```
 
-이 환경의 목적은 production benchmark가 아니라 local baseline measurement다. 모든 컨테이너가 같은 로컬 머신 자원을 공유하므로 절대 성능 보장으로 해석하지 않는다.
+로컬 `k6-smoke`는 기능 확인용이다. 성능 측정용 부하 발생기는 Grafana Cloud k6를 사용한다.
 
-Compose 환경에서는 Prometheus가 Docker network 내부 service name으로 scrape한다.
+AWS target system의 public metrics endpoints:
 
 | Target | Purpose |
 |---|---|
-| `ssp:8080/metrics` | SSP auction metrics |
-| `dsp-a:8081/metrics` | DSP-A metrics |
-| `dsp-b:8081/metrics` | DSP-B metrics |
-| `dsp-c:8081/metrics` | DSP-C metrics |
-| `dsp-d:8081/metrics` | DSP-D metrics |
+| `https://13-125-82-244.sslip.io/metrics/ssp` | SSP auction metrics |
+| `https://13-125-82-244.sslip.io/metrics/dsp-a` | DSP-A metrics |
+| `https://13-125-82-244.sslip.io/metrics/dsp-b` | DSP-B metrics |
+| `https://13-125-82-244.sslip.io/metrics/dsp-c` | DSP-C metrics |
+| `https://13-125-82-244.sslip.io/metrics/dsp-d` | DSP-D metrics |
 
 ## 9. Grafana Cloud Monitoring
 
-AWS 성능 측정에서는 Grafana UI를 EC2에 함께 띄우지 않고 Grafana Cloud를 사용한다.
+AWS 성능 측정에서는 EC2에 Grafana와 Prometheus를 함께 띄우지 않는다.
 
-Repository에는 비밀값이 없는 템플릿만 둔다.
+Grafana Cloud Metrics Endpoint에 scrape job을 등록한다.
 
-```text
-monitoring/prometheus/prometheus.cloud.yml.template
-docker-compose.cloud-monitoring.yml
-```
+| Job | URL |
+|---|---|
+| `rtb-ssp` | `https://13-125-82-244.sslip.io/metrics/ssp` |
+| `rtb-dsp-a` | `https://13-125-82-244.sslip.io/metrics/dsp-a` |
+| `rtb-dsp-b` | `https://13-125-82-244.sslip.io/metrics/dsp-b` |
+| `rtb-dsp-c` | `https://13-125-82-244.sslip.io/metrics/dsp-c` |
+| `rtb-dsp-d` | `https://13-125-82-244.sslip.io/metrics/dsp-d` |
 
-실제 배포 파일은 Git에 커밋하지 않는다.
-
-```bash
-cp monitoring/prometheus/prometheus.cloud.yml.template monitoring/prometheus/prometheus.cloud.yml
-mkdir -p .secrets
-printf '%s' '<Grafana Cloud Access Policy Token>' > .secrets/grafana_cloud_api_token
-chmod 644 .secrets/grafana_cloud_api_token
-```
-
-The token is mounted into Prometheus through Docker Compose secrets as `/run/secrets/grafana_cloud_api_token`. The Prometheus image runs as `nobody`, so the token file must be readable by the container user.
-
-Cloud monitoring compose override:
-
-```bash
-docker compose \
-  -f docker-compose.perf.yml \
-  -f docker-compose.cloud-monitoring.yml \
-  up --build -d ssp prometheus
-```
-
-Grafana Cloud로 전송되는 metric에는 다음 external labels를 붙인다.
+각 scrape job에는 다음 labels를 붙인다.
 
 | Label | Value |
 |---|---|
@@ -221,8 +209,35 @@ Grafana Cloud로 전송되는 metric에는 다음 external labels를 붙인다.
 | `environment` | `aws-perf` |
 | `service_group` | `rtb` |
 
+DSP job에는 추가로 `app=dsp`, `dsp_id=dsp-a`처럼 DSP 식별 label을 붙인다. SSP job에는 `app=ssp`를 붙인다.
+
 Grafana Cloud에서 이 프로젝트 metric만 확인할 때는 다음 label filter를 사용한다.
 
 ```promql
 {project="low-latency-openrtb-auction", environment="aws-perf"}
 ```
+
+## 10. Grafana Cloud k6
+
+성능 측정용 부하 발생기는 Grafana Cloud k6를 사용한다.
+
+```text
+Grafana Cloud k6
+ -> https://13-125-82-244.sslip.io/openrtb/auction
+ -> AWS EC2 SSP
+ -> DSP-A/B/C/D
+```
+
+이 구조는 local Mac 또는 Docker Desktop 네트워크를 부하 테스트 경로에서 제거한다. 결과를 해석할 때는 Grafana Cloud k6의 load zone과 AWS region을 함께 기록한다.
+
+## 11. Prometheus Remote Write Alternative
+
+EC2 내부 scrape가 필요해지면 Prometheus remote_write 구성을 다시 사용할 수 있다.
+
+```text
+SSP / DSP
+ -> Prometheus on EC2
+ -> Grafana Cloud remote_write
+```
+
+이 방식은 `/metrics`를 public으로 열지 않아도 되는 장점이 있지만, EC2에 Prometheus 컨테이너를 남긴다. 현재 AWS performance setup에서는 사용하지 않는다.
