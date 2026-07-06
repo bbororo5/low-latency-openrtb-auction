@@ -2,8 +2,13 @@ services:
   prometheus:
     volumes:
       - ./monitoring/prometheus/prometheus.cloud.yml:/etc/prometheus/prometheus.yml:ro
-      - ./.secrets/grafana_cloud_api_token:/run/secrets/grafana_cloud_api_token:ro
+    secrets:
+      - grafana_cloud_api_token
 
   grafana:
     profiles:
       - local-grafana
+
+secrets:
+  grafana_cloud_api_token:
+    file: ./.secrets/grafana_cloud_api_token
