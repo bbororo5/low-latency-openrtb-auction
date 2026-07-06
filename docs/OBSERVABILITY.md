@@ -199,10 +199,10 @@ docker-compose.cloud-monitoring.yml
 cp monitoring/prometheus/prometheus.cloud.yml.template monitoring/prometheus/prometheus.cloud.yml
 mkdir -p .secrets
 printf '%s' '<Grafana Cloud Access Policy Token>' > .secrets/grafana_cloud_api_token
-chmod 600 .secrets/grafana_cloud_api_token
+chmod 644 .secrets/grafana_cloud_api_token
 ```
 
-The token is mounted into Prometheus through Docker Compose secrets as `/run/secrets/grafana_cloud_api_token`.
+The token is mounted into Prometheus through Docker Compose secrets as `/run/secrets/grafana_cloud_api_token`. The Prometheus image runs as `nobody`, so the token file must be readable by the container user.
 
 Cloud monitoring compose override:
 
