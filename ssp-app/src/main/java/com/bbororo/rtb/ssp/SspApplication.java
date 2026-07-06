@@ -2,6 +2,7 @@ package com.bbororo.rtb.ssp;
 
 import com.bbororo.rtb.shared.observability.PrometheusMetricsHttpHandler;
 import com.bbororo.rtb.shared.observability.RtbMetrics;
+import com.bbororo.rtb.shared.observability.RuntimeMetrics;
 import com.bbororo.rtb.shared.openrtb.codec.JacksonOpenRtbJsonCodec;
 import com.bbororo.rtb.shared.openrtb.codec.OpenRtbJsonCodec;
 import com.bbororo.rtb.ssp.adapter.web.JdkSspHttpServer;
@@ -41,6 +42,7 @@ public final class SspApplication {
 
     public static JdkSspHttpServer createServer(int port) {
         PrometheusMeterRegistry registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+        RuntimeMetrics.bindTo(registry);
         RtbMetrics metrics = new RtbMetrics(registry);
         OpenRtbJsonCodec codec = new JacksonOpenRtbJsonCodec();
         AuctionFlow auctionFlow = auctionFlow(codec, metrics);

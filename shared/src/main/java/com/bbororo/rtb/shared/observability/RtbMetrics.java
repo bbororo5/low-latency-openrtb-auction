@@ -5,13 +5,19 @@ import io.micrometer.core.instrument.Timer;
 
 import java.time.Duration;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public final class RtbMetrics {
 
     private final MeterRegistry registry;
+    private final AtomicInteger sspDspInflightCalls;
 
     public RtbMetrics(MeterRegistry registry) {
         this.registry = Objects.requireNonNull(registry, "registry must not be null");
+        this.sspDspInflightCalls = registry.gauge(
+                "rtb_ssp_dsp_inflight_calls",
+                new AtomicInteger(0)
+        );
     }
 
     public void recordSspAuction(Duration duration, String mediaType, String result) {
@@ -38,6 +44,14 @@ public final class RtbMetrics {
                 "dsp_id", RtbMetricTags.value(dspId),
                 "result", RtbMetricTags.value(result)
         ).increment();
+    }
+
+    public void incrementSspDspInflightCalls() {
+        sspDspInflightCalls.incrementAndGet();
+    }
+
+    public void decrementSspDspInflightCalls() {
+        sspDspInflightCalls.updateAndGet(value -> Math.max(0, value - 1));
     }
 
     public void recordDspBidHandling(Duration duration, String mediaType, String result) {

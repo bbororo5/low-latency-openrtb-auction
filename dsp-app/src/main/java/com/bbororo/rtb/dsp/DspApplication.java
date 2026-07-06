@@ -20,6 +20,7 @@ import com.bbororo.rtb.dsp.pricing.DefaultPricing;
 import com.bbororo.rtb.shared.common.MediaType;
 import com.bbororo.rtb.shared.observability.PrometheusMetricsHttpHandler;
 import com.bbororo.rtb.shared.observability.RtbMetrics;
+import com.bbororo.rtb.shared.observability.RuntimeMetrics;
 import com.bbororo.rtb.shared.openrtb.codec.JacksonOpenRtbJsonCodec;
 import io.micrometer.prometheusmetrics.PrometheusConfig;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
@@ -52,6 +53,7 @@ public final class DspApplication {
 
     public static JdkDspHttpServer createServer(DspRuntimeConfig config) {
         PrometheusMeterRegistry registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+        RuntimeMetrics.bindTo(registry);
         RtbMetrics metrics = new RtbMetrics(registry);
         JacksonOpenRtbJsonCodec codec = new JacksonOpenRtbJsonCodec();
         BidHandler bidHandler = bidHandler(config);

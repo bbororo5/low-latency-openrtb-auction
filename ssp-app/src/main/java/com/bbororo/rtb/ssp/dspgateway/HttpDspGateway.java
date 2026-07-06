@@ -66,9 +66,11 @@ public final class HttpDspGateway implements DspGateway {
         for (DspEndpoint endpoint : endpoints) {
             Duration timeout = remaining(deadline);
             Instant startedAt = Instant.now();
+            metrics.incrementSspDspInflightCalls();
             CompletableFuture<DspCallResult> future = httpClient.postBidJson(endpoint, jsonBody, timeout)
                     .thenApply(response -> resultMapper.fromResponse(response, deadline))
-                    .exceptionally(error -> resultMapper.fromFailure(endpoint, error, Instant.now()));
+                    .exceptionally(error -> resultMapper.fromFailure(endpoint, error, Instant.now()))
+                    .whenComplete((result, error) -> metrics.decrementSspDspInflightCalls());
             futures.add(new DspCallFuture(endpoint, startedAt, future));
         }
         return futures;
