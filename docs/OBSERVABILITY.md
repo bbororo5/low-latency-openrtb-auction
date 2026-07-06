@@ -211,6 +211,14 @@ Grafana Cloud Metrics Endpoint에 scrape job을 등록한다.
 
 DSP job에는 추가로 `app=dsp`, `dsp_id=dsp-a`처럼 DSP 식별 label을 붙인다. SSP job에는 `app=ssp`를 붙인다.
 
+Metrics Endpoint authentication:
+
+| Field | Value |
+|---|---|
+| Authentication type | `Basic` |
+| Username | `grafana` |
+| Password | Stored outside Git in `.secrets/grafana_metrics_endpoint_password` |
+
 Grafana Cloud에서 이 프로젝트 metric만 확인할 때는 다음 label filter를 사용한다.
 
 ```promql
