@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 public final class JdkHttpDspClient implements HttpDspClient {
 
@@ -22,10 +23,17 @@ public final class JdkHttpDspClient implements HttpDspClient {
     }
 
     public static JdkHttpDspClient createDefault() {
-        return new JdkHttpDspClient(HttpClient.newBuilder()
+        return createDefault(null);
+    }
+
+    public static JdkHttpDspClient createDefault(Executor executor) {
+        HttpClient.Builder builder = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
-                .connectTimeout(Duration.ofMillis(100))
-                .build());
+                .connectTimeout(Duration.ofMillis(100));
+        if (executor != null) {
+            builder.executor(executor);
+        }
+        return new JdkHttpDspClient(builder.build());
     }
 
     @Override

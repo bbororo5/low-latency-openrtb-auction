@@ -69,10 +69,16 @@ public final class HttpDspGateway implements DspGateway {
             Instant startedAt = Instant.now();
             AtomicBoolean inflight = new AtomicBoolean(true);
             metrics.incrementSspDspInflightCalls();
-            CompletableFuture<DspCallResult> future = httpClient.postBidJson(endpoint, jsonBody, timeout)
-                    .thenApply(response -> resultMapper.fromResponse(response, deadline))
-                    .exceptionally(error -> resultMapper.fromFailure(endpoint, error, Instant.now()))
-                    .whenComplete((result, error) -> releaseInflight(inflight));
+            CompletableFuture<DspCallResult> future;
+            try {
+                future = httpClient.postBidJson(endpoint, jsonBody, timeout)
+                        .thenApply(response -> resultMapper.fromResponse(response, deadline))
+                        .exceptionally(error -> resultMapper.fromFailure(endpoint, error, Instant.now()))
+                        .whenComplete((result, error) -> releaseInflight(inflight));
+            } catch (RuntimeException e) {
+                releaseInflight(inflight);
+                future = CompletableFuture.completedFuture(resultMapper.fromFailure(endpoint, e, Instant.now()));
+            }
             futures.add(new DspCallFuture(endpoint, startedAt, future, inflight));
         }
         return futures;

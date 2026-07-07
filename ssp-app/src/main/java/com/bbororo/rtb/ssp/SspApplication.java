@@ -1,6 +1,7 @@
 package com.bbororo.rtb.ssp;
 
 import com.bbororo.rtb.shared.observability.PrometheusMetricsHttpHandler;
+import com.bbororo.rtb.shared.observability.ExecutorMetrics;
 import com.bbororo.rtb.shared.observability.RtbMetrics;
 import com.bbororo.rtb.shared.observability.RuntimeMetrics;
 import com.bbororo.rtb.shared.openrtb.codec.JacksonOpenRtbJsonCodec;
@@ -12,6 +13,8 @@ import com.bbororo.rtb.ssp.auctionflow.DefaultAuctionDeadlinePolicy;
 import com.bbororo.rtb.ssp.auctionflow.DefaultAuctionFlow;
 import com.bbororo.rtb.ssp.bidjudge.DefaultBidJudge;
 import com.bbororo.rtb.ssp.dspgateway.DspEndpoint;
+import com.bbororo.rtb.ssp.dspgateway.DspHttpExecutor;
+import com.bbororo.rtb.ssp.dspgateway.DspHttpExecutorConfig;
 import com.bbororo.rtb.ssp.dspgateway.DspHttpResultMapper;
 import com.bbororo.rtb.ssp.dspgateway.HttpDspGateway;
 import com.bbororo.rtb.ssp.dspgateway.JdkHttpDspClient;
@@ -45,7 +48,7 @@ public final class SspApplication {
         RuntimeMetrics.bindTo(registry);
         RtbMetrics metrics = new RtbMetrics(registry);
         OpenRtbJsonCodec codec = new JacksonOpenRtbJsonCodec();
-        AuctionFlow auctionFlow = auctionFlow(codec, metrics);
+        AuctionFlow auctionFlow = auctionFlow(codec, metrics, registry);
 
         return new JdkSspHttpServer(
                 port,
@@ -54,12 +57,22 @@ public final class SspApplication {
         );
     }
 
-    private static AuctionFlow auctionFlow(OpenRtbJsonCodec codec, RtbMetrics metrics) {
+    private static AuctionFlow auctionFlow(
+            OpenRtbJsonCodec codec,
+            RtbMetrics metrics,
+            PrometheusMeterRegistry registry
+    ) {
         var resultMapper = new DspHttpResultMapper(codec);
+        var dspHttpExecutor = new DspHttpExecutor(DspHttpExecutorConfig.fromEnv());
+        ExecutorMetrics.bindSspDspExecutor(
+                registry,
+                dspHttpExecutor,
+                executor -> ((DspHttpExecutor) executor).rejectedTaskCount()
+        );
         var dspGateway = new HttpDspGateway(
                 new StaticDspEndpointRegistry(configuredDspEndpoints()),
                 codec,
-                JdkHttpDspClient.createDefault(),
+                JdkHttpDspClient.createDefault(dspHttpExecutor),
                 resultMapper,
                 metrics
         );
