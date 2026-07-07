@@ -53,6 +53,10 @@ RTB에서는 모든 비정상처럼 보이는 결과가 장애는 아니다. `NO
 | `rtb_dsp_campaign_lookup_duration` | 캠페인 후보 조회가 p95/p99에 미치는 영향 확인 |
 | `rtb_dsp_matcher_duration` | 타겟 조건 매칭 비용 확인 |
 | `rtb_dsp_pricing_duration` | 가격 산정 비용 확인 |
+| `rtb_ssp_dsp_executor_active_threads` | SSP가 DSP HTTP 호출에 실제로 사용 중인 worker 수 확인 |
+| `rtb_ssp_dsp_executor_pool_size` | SSP DSP HTTP executor가 어느 정도까지 커졌는지 확인 |
+| `rtb_ssp_dsp_executor_queued_tasks` | DSP 호출 작업이 executor queue에 밀리는지 확인 |
+| `rtb_ssp_dsp_executor_rejected_tasks` | executor 한계를 넘어선 요청이 발생했는지 확인 |
 | JVM / GC / thread / connection metrics | 자원 포화 또는 runtime 병목 의심 시 확인 |
 
 ## 4. Tag Policy
@@ -231,7 +235,7 @@ Grafana Cloud에서 이 프로젝트 metric만 확인할 때는 다음 label fil
 | Dashboard | File | Purpose |
 |---|---|---|
 | RTB Auction Overview | `monitoring/grafana/cloud/rtb-auction-overview.import.json` | 경매 결과, SSP/DSP 지연, DSP 결과 분포 확인 |
-| RTB Runtime Saturation | `monitoring/grafana/cloud/rtb-runtime-saturation.import.json` | JVM thread, CPU, heap, GC, SSP in-flight DSP call 확인 |
+| RTB Runtime Saturation | `monitoring/grafana/cloud/rtb-runtime-saturation.import.json` | JVM thread, CPU, heap, GC, SSP in-flight DSP call, SSP DSP executor 상태 확인 |
 
 두 대시보드는 역할이 다르다.
 
@@ -239,6 +243,8 @@ Grafana Cloud에서 이 프로젝트 metric만 확인할 때는 다음 label fil
 Auction Overview: 경매가 깨졌는가?
 Runtime Saturation: 왜 깨졌는가?
 ```
+
+SSP DSP executor는 SSP가 여러 DSP로 HTTP 요청을 보낼 때 사용하는 제한된 worker pool이다. 이 값은 전체 JVM thread 수가 튀었을 때 원인이 DSP fan-out인지, executor queue 포화인지, 아니면 다른 runtime 문제인지 구분하기 위해 본다.
 
 ## 10. Grafana Cloud k6
 

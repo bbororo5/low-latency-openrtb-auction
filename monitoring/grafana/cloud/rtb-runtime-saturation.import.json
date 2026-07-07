@@ -288,6 +288,108 @@
           "legendFormat": "{{scrape_job}}"
         }
       ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "SSP DSP Executor Threads",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 35},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 2, "fillOpacity": 8, "showPoints": "never"}
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rtb_ssp_dsp_executor_active_threads{scrape_job=\"rtb-ssp\"}",
+          "legendFormat": "active"
+        },
+        {
+          "refId": "B",
+          "expr": "rtb_ssp_dsp_executor_pool_size{scrape_job=\"rtb-ssp\"}",
+          "legendFormat": "pool"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "SSP DSP Executor Queue",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 35},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 2, "fillOpacity": 12, "showPoints": "never"}
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rtb_ssp_dsp_executor_queued_tasks{scrape_job=\"rtb-ssp\"}",
+          "legendFormat": "queued"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "SSP DSP Executor Throughput",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 43},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 2, "fillOpacity": 8, "showPoints": "never"}
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(rtb_ssp_dsp_executor_completed_tasks_total{scrape_job=\"rtb-ssp\"}[$__rate_interval])",
+          "legendFormat": "completed/s"
+        },
+        {
+          "refId": "B",
+          "expr": "rate(rtb_ssp_dsp_executor_rejected_tasks_total{scrape_job=\"rtb-ssp\"}[$__rate_interval])",
+          "legendFormat": "rejected/s"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "type": "stat",
+      "title": "SSP DSP Executor Rejections",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 43},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 1},
+              {"color": "red", "value": 10}
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "increase(rtb_ssp_dsp_executor_rejected_tasks_total{scrape_job=\"rtb-ssp\"}[$__range])",
+          "legendFormat": "rejected"
+        }
+      ]
     }
   ]
 }
