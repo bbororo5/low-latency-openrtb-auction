@@ -150,6 +150,8 @@ flowchart LR
 
 `Lightweight SSP Application`은 provider slot request를 검증하고 inventory 설정을 조회해 OpenRTB BidRequest를 만든 뒤 경량 DSP로 전달하고, BidResponse를 수집해 낙찰자와 낙찰가를 결정한다.
 
+SSP inventory는 단순 테스트 fixture가 아니라 SSP가 소유하는 공급 지면 기준 데이터다. 현재 구현은 외부 기준 저장소 제품을 아직 정하지 않았기 때문에 프로세스 내부 in-memory catalog를 사용하지만, 아키텍처상 원본 저장소와 hot path serving copy는 분리해서 본다.
+
 SSP와 DSP 사이의 요청/응답 경계는 OpenRTB subset을 따른다. provider-facing 입력은 프로젝트 계약이고, OpenRTB 표준 경계는 SSP가 생성해 DSP에 보내는 `BidRequest`부터 시작한다. 광고 타입은 SSP-DSP 경계 객체에서 커스텀 `mediaType` 필드로 표현하지 않고, `Imp.banner`, `Imp.video` 계열 객체의 존재로 표현한다. 각 애플리케이션 내부에서는 이 구조를 `BANNER`, `VIDEO` 같은 내부 enum으로 정규화해 사용한다.
 
 주요 책임:
@@ -176,7 +178,7 @@ SSP와 DSP 사이의 요청/응답 경계는 OpenRTB subset을 따른다. provid
 
 `Campaign Data Store`는 광고주 캠페인 원본 데이터를 보존하는 데이터 저장 컨테이너다. 경량 DSP는 이 데이터를 매 BidRequest마다 동기 조회하지 않고, 사전에 로드한 snapshot 또는 인메모리 인덱스를 통해 입찰 판단을 수행한다.
 
-원본 캠페인 데이터를 어떤 저장소 기술로 둘지, 테스트 fixture에서 로드할지, 부팅 시 로드한 뒤 프로세스 내부 메모리에 유지할지는 이 문서에서 확정하지 않는다. 단, 입찰 hot path에서 매 요청마다 외부 저장소를 조회하는 구조는 전제로 두지 않는다.
+SSP inventory와 DSP campaign 원본 데이터를 어떤 저장소 기술로 둘지는 이 문서에서 확정하지 않는다. 단, 입찰 hot path에서 매 요청마다 외부 저장소를 동기 조회하는 구조는 전제로 두지 않는다. 현재 in-memory 구현은 fixture가 아니라 향후 외부 기준 저장소에서 로드될 serving copy의 최소 구현으로 본다.
 
 실제 OpenRTB 생태계에서 DSP는 광고 구매 측 외부 시스템이다. 이 프로젝트는 RTB 입찰 핵심 경로를 작게 검증하기 위해 경량 DSP를 시스템 내부 컨테이너로 둔다.
 

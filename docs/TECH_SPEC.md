@@ -285,9 +285,26 @@ Campaign Data Store에 저장되는 데이터는 3.1의 범위로 제한한다. 
 | `bid` | 입찰가와 통화 |
 | `creative` | `crid`, `adomain`, 테스트용 `adm` 생성에 필요한 정보 |
 
-저장소의 실제 구현 방식은 이 장에서 확정하지 않는다. 초기 구현에서는 재현 가능한 테스트 데이터를 우선하고, 저장소 기술 선택은 hot path나 재현성에 영향을 줄 때 별도 검토한다.
+저장소의 실제 구현 방식은 이 장에서 확정하지 않는다. 현재 구현에서는 재현 가능한 seed data로 serving copy를 구성하고, 저장소 기술 선택은 hot path나 재현성에 영향을 줄 때 별도 검토한다.
 
-### 3.3 Campaign Data Store -> DSP: Campaign Snapshot
+### 3.3 SSP Inventory Store -> SSP Inventory Catalog
+
+SSP inventory는 provider/placement별 공급 지면 설정의 기준 데이터다. 현재 코드의 `InMemoryInventoryCatalog`는 이 기준 데이터를 프로세스 내부에서 바로 들고 있는 최소 구현이지만, 제품급 구조에서는 외부 inventory store가 원본이고 SSP hot path는 그 데이터를 로드한 serving copy를 읽는 형태가 자연스럽다.
+
+이 문서는 외부 inventory store 제품을 확정하지 않는다. PostgreSQL 같은 영속 DB, Redis/Valkey 계열 인메모리 store, 관리형 memory store, 또는 별도 config 배포 방식은 아직 선택하지 않는다. 다만 경매 요청 처리 중 provider/placement 조회를 외부 저장소 동기 호출에 의존하지 않는다는 원칙은 둔다.
+
+Inventory Catalog가 hot path에서 제공해야 하는 데이터:
+
+| 데이터 | 사용 목적 |
+|---|---|
+| `providerId`, `placementId` | slot request가 어떤 공급 지면에 해당하는지 식별 |
+| `enabled` | 비활성 지면 거절 |
+| `mediaType` | 요청 광고 타입과 placement 타입 호환성 검증 |
+| banner/video media spec | 크기, MIME, duration, protocol 검증과 BidRequest 생성 |
+| `bidfloor`, `currency` | DSP 입찰 최소가와 통화 검증 |
+| `defaultTmax` | 요청에 tmax가 없을 때 deadline 계산 기준 제공 |
+
+### 3.4 Campaign Data Store -> DSP: Campaign Snapshot
 
 경량 DSP는 시작 시점에 Campaign Data Store에서 캠페인 데이터를 읽어 Campaign Snapshot을 구성한다.
 
@@ -302,7 +319,7 @@ BidRequest 처리 중에는 Campaign Data Store를 동기 조회하지 않는다
 | 실패 격리 | 저장소 장애가 진행 중인 입찰 판단으로 바로 전파되지 않는다 |
 | 관찰 가능성 | 지연 원인을 입찰 로직 중심으로 좁혀 측정할 수 있다 |
 
-### 3.4 DSP 내부 Campaign Repository / Index
+### 3.5 DSP 내부 Campaign Repository / Index
 
 DSP 내부 Campaign Repository/Index는 BidRequest 처리 중 실제로 조회되는 메모리 구조다.
 
@@ -317,7 +334,7 @@ DSP 내부 Repository/Index의 책임:
 - 타겟 조건과 입찰 조건을 평가할 수 있는 형태로 데이터를 제공한다.
 - BidResponse 생성을 위한 creative 참조 정보를 제공한다.
 
-### 3.5 캠페인 데이터 갱신 범위
+### 3.6 캠페인 데이터 갱신 범위
 
 이 문서의 기본 결정은 단순 스냅샷이다. DSP는 시작 시점에 Campaign Snapshot을 한 번 로드하고, 실행 중 캠페인 변경 반영은 다루지 않는다.
 
@@ -1171,7 +1188,7 @@ Load baseline 스크립트는 아직 latency threshold로 실패하지 않는다
 | timeout DSP 포함 | 일부 DSP 지연이 전체 경매에 미치는 영향 |
 | invalid bid 포함 | Bid Judge 검증과 제외 처리가 안정적인지 확인 |
 
-기본 부하 테스트는 같은 입력 조건에서 반복 가능해야 한다. 요청 payload, DSP 설정, 캠페인 데이터는 테스트 fixture로 고정한다.
+기본 부하 테스트는 같은 입력 조건에서 반복 가능해야 한다. 요청 payload, DSP 설정, inventory serving copy, 캠페인 snapshot은 테스트 중 고정한다.
 
 Campaign Lookup은 초기 구현에서 단순 순회가 될 수 있다. 캠페인 수 증가에 따라 p95/p99가 급격히 악화되면 광고 타입, 크기, 국가 같은 조건 기반 인덱스 개선 후보로 기록한다.
 
