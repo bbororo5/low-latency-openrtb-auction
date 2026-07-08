@@ -148,7 +148,7 @@ These are not implementation decisions yet; they are points to check after compo
 
 | Area | Observation |
 |---|---|
-| Slot Ingress validation | Media-spec validation now uses an explicit empty/failure result instead of returning `null` for success. |
+| Slot Ingress validation | `DefaultSlotRequestHandler` now coordinates request, inventory, and command creation, while `SlotMediaSpecValidator` owns banner/video compatibility checks with explicit empty/failure results. |
 | Winner tie-break | `FirstPriceWinnerSelector` currently compares price only. The documented deterministic tie-break by arrival time then `dspId` is not yet implemented. |
 | No-bid classification | HTTP 204 is already mapped to `NO_BID`, aligned with IAB implementation guidance. |
 | Empty seatbid | Current `BidJudge` treats empty `seatbid` under `BID_RECEIVED` as invalid. Industry guidance allows empty `seatbid` as no-bid, so the project should either support it or document that only HTTP 204 no-bid is accepted from the lightweight DSP path. |

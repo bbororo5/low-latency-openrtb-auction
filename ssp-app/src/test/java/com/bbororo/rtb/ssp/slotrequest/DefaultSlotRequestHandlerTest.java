@@ -99,6 +99,19 @@ class DefaultSlotRequestHandlerTest {
         assertEquals(SlotRequestRejectionReason.INVALID_REQUEST, rejected.reason());
     }
 
+    @Test
+    void rejects_media_spec_validation_failure_before_bid_request_creation() {
+        DefaultSlotRequestHandler handler = handler();
+
+        SlotRequestHandlingResult result = handler.handle(
+                bannerRequest("publisher-demo", "home-top-banner", 300, null),
+                Instant.EPOCH
+        );
+
+        RejectedSlotRequest rejected = assertInstanceOf(RejectedSlotRequest.class, result);
+        assertEquals(SlotRequestRejectionReason.INVALID_REQUEST, rejected.reason());
+    }
+
     private static DefaultSlotRequestHandler handler() {
         var catalog = new InMemoryInventoryCatalog(List.of(
                 new InventoryPlacement(
@@ -126,7 +139,7 @@ class DefaultSlotRequestHandlerTest {
         return new DefaultSlotRequestHandler(catalog, factory);
     }
 
-    private static ProviderSlotRequest bannerRequest(String providerId, String placementId, int width, int height) {
+    private static ProviderSlotRequest bannerRequest(String providerId, String placementId, Integer width, Integer height) {
         return new ProviderSlotRequest(
                 providerId,
                 placementId,
