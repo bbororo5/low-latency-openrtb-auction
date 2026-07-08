@@ -17,7 +17,7 @@
   <text x="605" y="144" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#1e3a8a">RTB Bidding System</text>
 
   <rect x="70" y="215" width="165" height="88" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
-  <text x="152" y="265" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#0f172a">Auction Client</text>
+  <text x="152" y="265" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#0f172a">Slot Client</text>
 
   <rect x="355" y="190" width="205" height="112" rx="12" fill="#1d4ed8" filter="url(#shadow)"/>
   <text x="458" y="237" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#ffffff">Lightweight SSP</text>
@@ -35,7 +35,7 @@
   <text x="1025" y="422" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Setup</text>
 
   <path d="M235 245 L349 245" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
-  <text x="292" y="226" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">BidRequest</text>
+  <text x="292" y="226" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">ProviderSlotRequest</text>
 
   <path d="M355 286 C302 338 235 334 184 304" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
   <text x="270" y="356" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">AuctionResult</text>

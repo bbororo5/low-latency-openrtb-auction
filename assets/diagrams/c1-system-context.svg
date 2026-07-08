@@ -18,13 +18,13 @@
   <text x="540" y="254" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#ffffff">System</text>
 
   <rect x="80" y="170" width="170" height="90" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
-  <text x="165" y="221" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#0f172a">Auction Client</text>
+  <text x="165" y="221" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#0f172a">Slot Client</text>
 
   <rect x="825" y="170" width="170" height="90" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
   <text x="910" y="221" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#0f172a">Campaign Setup</text>
 
   <path d="M250 205 L389 205" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
-  <text x="320" y="186" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">BidRequest</text>
+  <text x="320" y="186" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">ProviderSlotRequest</text>
 
   <path d="M395 255 C340 310 254 310 193 260" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
   <text x="290" y="330" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">AuctionResult</text>

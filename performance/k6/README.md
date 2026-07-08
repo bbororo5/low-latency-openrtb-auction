@@ -2,6 +2,8 @@
 
 이 디렉토리는 경량 SSP와 경량 DSP의 hot path를 측정하기 위한 k6 스크립트를 둔다.
 
+현재 `smoke.js`, `load-baseline.js`, `load-capacity.js`의 기본 입력 경로는 `POST /publisher/auction`이다. k6는 Provider Slot Request를 보내고, SSP가 내부에서 OpenRTB BidRequest를 생성한다. 기존 `POST /openrtb/auction` 직접 입력 경로는 `INGRESS_MODE=openrtb`를 지정할 때만 benchmark/호환성 비교용으로 사용한다.
+
 ## Test Types
 
 | Type | Purpose | Current Status |
@@ -51,6 +53,12 @@ SSP 주소를 바꾸려면 다음 환경변수를 사용한다.
 
 ```bash
 BASE_URL=http://localhost:8080 k6 run performance/k6/smoke.js
+```
+
+direct OpenRTB benchmark path를 쓰려면 다음처럼 실행한다.
+
+```bash
+INGRESS_MODE=openrtb BASE_URL=http://localhost:8080 k6 run performance/k6/smoke.js
 ```
 
 검증 내용:
@@ -104,7 +112,7 @@ for rps in 100 300 500 1000 1500 2000; do
 done
 ```
 
-이 두 결과는 이후 실제 `/openrtb/auction` 결과와 비교한다. 예를 들어 `/ok`와 JSON baseline은 안정적인데 실제 경매만 무너지면 VM이나 HTTP 서버 자체보다 SSP-DSP fan-out, executor, DSP 응답 처리, 도메인 로직 쪽을 먼저 의심한다.
+이 두 결과는 이후 실제 provider-facing `/publisher/auction` 결과와 비교한다. direct OpenRTB 입력만 분리해 보고 싶다면 `INGRESS_MODE=openrtb`로 `/openrtb/auction` 결과를 별도로 측정한다. 예를 들어 `/ok`와 JSON baseline은 안정적인데 실제 경매만 무너지면 VM이나 HTTP 서버 자체보다 slot request 검증, BidRequest 생성, SSP-DSP fan-out, executor, DSP 응답 처리, 도메인 로직 쪽을 먼저 의심한다.
 
 ## Load Capacity Baseline
 

@@ -4,6 +4,8 @@
 
 이 결과는 production benchmark가 아니다. 각 측정값은 해당 부하 발생기, 네트워크 경로, target system 배포 조건 안에서만 해석한다.
 
+주의: 이 문서의 기존 RTB JSON capacity/resilience 기록은 provider slot ingress 도입 전 direct `POST /openrtb/auction` 경로를 기준으로 측정한 historical baseline이다. 현재 k6 기본 경로는 `POST /publisher/auction`이며, direct OpenRTB 경로를 재현하려면 `INGRESS_MODE=openrtb`를 명시한다.
+
 ## 1. Test Environment
 
 Date: 2026-07-05

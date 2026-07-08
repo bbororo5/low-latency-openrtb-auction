@@ -10,14 +10,15 @@ PRD가 무엇을 해결할지 정의하고, Architecture가 어떤 구조로 바
 
 이 문서의 목적은 경량 SSP와 경량 DSP로 구성된 RTB 입찰 시스템을 실제 구현으로 옮기기 위한 세부 기준을 정의하는 것이다.
 
-경량 SSP는 입찰 요청(`BidRequest`)을 받아 여러 경량 DSP로 전달하고, 제한 시간 안에 도착한 입찰 응답(`BidResponse`)을 수집해 낙찰자와 낙찰가를 결정한다.
+경량 SSP는 provider slot request를 받아 inventory 설정을 조회하고, DSP에 전달할 OpenRTB 입찰 요청(`BidRequest`)을 생성한 뒤 여러 경량 DSP로 전달한다. 이후 제한 시간 안에 도착한 입찰 응답(`BidResponse`)을 수집해 낙찰자와 낙찰가를 결정한다.
 
 경량 DSP는 전달받은 BidRequest를 해석하고, 자신의 캠페인 데이터와 비교해 입찰 여부와 입찰가를 결정한 뒤 BidResponse 또는 no-bid를 반환한다.
 
 특히 다음 질문에 답한다.
 
-- 어떤 OpenRTB 요청/응답 필드를 이 시스템의 지원 범위로 삼을 것인가?
-- 경량 SSP는 요청 검증, DSP 전달, 응답 수집, 낙찰 결정을 어떤 순서로 실행하는가?
+- provider-facing 요청은 어떤 필드를 받고 어떻게 BidRequest로 변환하는가?
+- 어떤 OpenRTB 요청/응답 필드를 SSP-DSP 경계의 지원 범위로 삼을 것인가?
+- 경량 SSP는 slot request 검증, inventory 조회, BidRequest 생성, DSP 전달, 응답 수집, 낙찰 결정을 어떤 순서로 실행하는가?
 - 경량 DSP는 어떤 설정과 캠페인 데이터를 바탕으로 bid 또는 no-bid를 결정하는가?
 - 응답 시간 초과(timeout), 늦게 도착한 입찰 응답(late bid), 잘못된 입찰 응답(invalid bid), 입찰하지 않음(no-bid)을 어느 책임에서 어떻게 구분하는가?
 - 구현이 요구사항을 만족하는지 어떤 테스트와 지표로 확인할 것인가?
@@ -28,8 +29,10 @@ PRD가 무엇을 해결할지 정의하고, Architecture가 어떤 구조로 바
 
 포함하는 범위:
 
+- Provider Slot Request의 지원 필드
+- SSP inventory 설정과 BidRequest 생성 규칙
 - OpenRTB BidRequest/BidResponse의 지원 필드
-- 경량 SSP의 BidRequest 검증, DSP fan-out, 응답 수집
+- 경량 SSP의 slot request 검증, BidRequest 생성, DSP fan-out, 응답 수집
 - 경량 SSP의 timeout, late bid, invalid bid, no-winner 처리
 - 경량 SSP의 낙찰자와 낙찰가 결정 규칙
 - 경량 DSP의 캠페인 데이터 모델
@@ -66,7 +69,7 @@ PRD가 무엇을 해결할지 정의하고, Architecture가 어떤 구조로 바
 
 | 영역 | 책임 |
 |---|---|
-| 경량 SSP | BidRequest 수신/검증, 경량 DSP 호출, 응답 제한 시간 적용, BidResponse 수집/검증, 낙찰자/낙찰가 결정 |
+| 경량 SSP | Provider Slot Request 수신/검증, inventory 조회, OpenRTB BidRequest 생성, 경량 DSP 호출, 응답 제한 시간 적용, BidResponse 수집/검증, 낙찰자/낙찰가 결정 |
 | 경량 DSP | BidRequest 해석, 캠페인 후보 평가, 광고 타입별 입찰 가능 여부 판단, 입찰가 산정, BidResponse 또는 no-bid 생성 |
 | 공통 | OpenRTB 객체 모델, 실패 분류, 성능 지표, 테스트 기준 |
 
@@ -80,37 +83,65 @@ PRD가 무엇을 해결할지 정의하고, Architecture가 어떤 구조로 바
 
 | 흐름 | 계약 | 성격 |
 |---|---|---|
-| `Auction Client -> SSP` | 테스트용 경매 시작 요청 | 프로젝트 입력 |
+| `Provider Slot Client -> SSP` | `ProviderSlotRequest` | 프로젝트 입력 |
 | `SSP -> DSP` | `BidRequest` | OpenRTB 표준 입찰 요청 |
 | `DSP -> SSP` | `BidResponse` 또는 `No-Bid` | OpenRTB 표준 입찰 응답 |
-| `SSP -> Auction Client` | `AuctionResult` | 프로젝트 검증용 결과 |
+| `SSP -> Provider Slot Client` | `AuctionResult` | 프로젝트 검증용 결과 |
 
-OpenRTB 표준 계약은 `SSP -> DSP`의 `BidRequest`와 `DSP -> SSP`의 `BidResponse`다. `Auction Client -> SSP`와 `SSP -> Auction Client`는 이 프로젝트를 실행하고 검증하기 위한 프로젝트 계약이다.
+OpenRTB 표준 계약은 `SSP -> DSP`의 `BidRequest`와 `DSP -> SSP`의 `BidResponse`다. `Provider Slot Client -> SSP`와 `SSP -> Provider Slot Client`는 이 프로젝트를 실행하고 검증하기 위한 프로젝트 계약이다.
 
-### 2.2 Auction Client -> SSP: 테스트용 경매 시작 요청
+### 2.2 Provider Slot Client -> SSP: ProviderSlotRequest
 
-OpenRTB 표준에서 `BidRequest`는 SSP가 DSP에게 보내는 입찰 요청이다. 이 프로젝트에서는 실제 게시자 서버나 광고 서버를 구현하지 않으므로, `Auction Client`가 경량 SSP에 경매 시작을 요청한다.
+OpenRTB 표준에서 `BidRequest`는 SSP가 DSP에게 보내는 입찰 요청이다. provider-facing 입력은 OpenRTB가 아니라, 광고 슬롯이 열렸다는 사실을 테스트 가능한 형태로 표현하는 프로젝트 계약이다.
 
-테스트용 경매 시작 요청은 다음 역할만 가진다.
+ProviderSlotRequest는 다음 역할만 가진다.
 
-- 테스트할 OpenRTB BidRequest payload를 제공한다.
+- provider와 placement를 식별한다.
+- 요청된 광고 타입과 슬롯 제약을 제공한다.
+- SSP가 inventory 설정을 조회해 BidRequest를 만들 수 있게 한다.
 - 동일한 입력으로 기능 테스트와 부하 테스트를 반복할 수 있게 한다.
 - 경량 SSP가 경매를 시작할 수 있는 API 진입점이 된다.
 
-이 요청은 OpenRTB 표준 구간이 아니다. 경량 SSP는 이 입력에서 OpenRTB `BidRequest` payload를 읽고, DSP로 전달할 `BidRequest`를 구성한다.
+지원 필드:
+
+| 필드 | 필수 | 설명 |
+|---|---:|---|
+| `providerId` | Y | publisher/provider 식별자 |
+| `placementId` | Y | provider 내부 광고 슬롯 식별자 |
+| `mediaType` | Y | `banner` 또는 `video` |
+| `width` | banner Y, video N | 배너 또는 동영상 슬롯 너비 |
+| `height` | banner Y, video N | 배너 또는 동영상 슬롯 높이 |
+| `mimes` | video Y | 요청 가능한 동영상 MIME 목록 |
+| `minDuration` | video Y | 허용 동영상 최소 길이 |
+| `maxDuration` | video Y | 허용 동영상 최대 길이 |
+| `protocols` | video Y | 지원 동영상 protocol 목록 |
+| `tmax` | N | 응답 제한 시간 힌트. 없으면 placement 기본값 또는 시스템 기본값 사용 |
+
+검증 규칙:
+
+- `providerId`, `placementId`, `mediaType`이 없으면 `INVALID_REQUEST`다.
+- 알 수 없는 placement, 비활성 placement, placement와 다른 광고 타입은 `UNSUPPORTED_REQUEST`다.
+- provider-facing 경로는 `banner`와 `video`만 지원한다. `native`, `audio`, `pmp`, CTV pod 요청은 `UNSUPPORTED_REQUEST`다.
+- banner는 양수 `width`, `height`가 있어야 하며 placement 크기와 일치해야 한다.
+- video는 `mimes`, `minDuration`, `maxDuration`, `protocols`가 있어야 하며 placement 조건과 호환되어야 한다.
+- `tmax`가 있으면 양수여야 한다.
+
+기본 endpoint는 `POST /publisher/auction`이다.
+
+기존 `POST /openrtb/auction`은 direct OpenRTB benchmark/test path로 유지한다. 이 경로는 SSP 입력 재현성과 이전 성능 측정 비교를 위한 보조 경로이며, 제품형 기본 입력은 아니다.
 
 ### 2.3 SSP -> DSP: BidRequest
 
-`BidRequest`는 경량 SSP가 경량 DSP에게 보내는 OpenRTB 표준 입찰 요청이다. 경량 SSP는 이 요청을 검증하고, 처리 가능한 요청만 경량 DSP에게 전달한다.
+`BidRequest`는 경량 SSP가 경량 DSP에게 보내는 OpenRTB 표준 입찰 요청이다. 기본 경로에서는 경량 SSP가 ProviderSlotRequest와 InventoryPlacement를 조합해 이 요청을 생성한다.
 
-SSP-DSP 경계에서는 커스텀 `mediaType` 필드를 사용하지 않는다. 광고 타입은 OpenRTB 객체 구조에 맞게 `Imp.banner`, `Imp.video`, `Imp.native` 계열 객체의 존재로 표현한다. 내부 컴포넌트는 이 경계 객체를 검증한 뒤 `MediaType` enum으로 정규화해 사용한다.
+SSP-DSP 경계에서는 커스텀 `mediaType` 필드를 사용하지 않는다. 광고 타입은 OpenRTB 객체 구조에 맞게 `Imp.banner`, `Imp.video` 객체의 존재로 표현한다. 내부 컴포넌트는 이 경계 객체를 검증한 뒤 `MediaType` enum으로 정규화해 사용한다.
 
 지원하는 요청 형태:
 
 - 하나의 `BidRequest`는 정확히 하나의 `Imp`를 가진다.
-- `Imp`는 `banner`, `video`, `native` 중 정확히 하나의 광고 타입 객체를 가진다.
-- `site`는 지원하고, `app`은 지원하지 않는다.
-- `audio`, `pmp`, multi-imp 요청은 지원하지 않는다.
+- `Imp`는 `banner`, `video` 중 정확히 하나의 광고 타입 객체를 가진다.
+- `site`, `app`, `user`, `device`, identity signal은 초기 provider-facing 경로에서 생성하지 않는다.
+- `native`, `audio`, `pmp`, multi-imp 요청은 provider-facing 경로에서 지원하지 않는다.
 - 통화는 `USD`만 지원한다.
 
 공통 필드:
@@ -121,8 +152,6 @@ SSP-DSP 경계에서는 커스텀 `mediaType` 필드를 사용하지 않는다. 
 | `BidRequest` | `imp` | Y | 광고 노출 기회. 이 시스템에서는 1개만 허용 |
 | `BidRequest` | `tmax` | N | 응답 제한 시간. 없으면 시스템 기본값 사용 |
 | `BidRequest` | `at` | N | 경매 방식. 없으면 시스템 기본값 사용 |
-| `BidRequest` | `site` | N | 지면 정보 |
-| `BidRequest` | `device` | N | 디바이스/지역 정보 |
 | `Imp` | `id` | Y | 광고 노출 기회 식별자 |
 | `Imp` | `bidfloor` | N | 최소 입찰가. 없으면 0 |
 | `Imp` | `bidfloorcur` | N | 최소 입찰가 통화. 값이 있으면 `USD`여야 함 |
@@ -135,8 +164,6 @@ SSP-DSP 경계에서는 커스텀 `mediaType` 필드를 사용하지 않는다. 
 | `video` | `mimes` | Y | 지원 가능한 MIME 타입 |
 | `video` | `minduration`, `maxduration` | Y | 허용 가능한 재생 시간 |
 | `video` | `protocols` | Y | 지원 가능한 동영상 응답 프로토콜 |
-| `native` | `request` | Y | Native Ad Specification JSON 문자열 |
-| `native` | `ver` | N | Native API 버전 |
 
 검증 규칙:
 
@@ -145,7 +172,6 @@ SSP-DSP 경계에서는 커스텀 `mediaType` 필드를 사용하지 않는다. 
 - `Imp`가 지원 광고 타입 객체를 하나도 갖지 않으면 `UNSUPPORTED_REQUEST`다.
 - `Imp`가 지원 광고 타입 객체를 두 개 이상 가지면 요청 의미가 모호하므로 `INVALID_REQUEST`다.
 - 광고 타입별 필수 필드가 없으면 `INVALID_REQUEST`다.
-- `Native.request`가 JSON 문자열로 파싱되지 않으면 `INVALID_REQUEST`다.
 - `bidfloorcur`가 있고 `USD`가 아니면 `UNSUPPORTED_REQUEST`다.
 
 ### 2.4 DSP -> SSP: BidResponse / No-Bid
@@ -167,8 +193,8 @@ SSP-DSP 경계에서는 커스텀 `mediaType` 필드를 사용하지 않는다. 
 | `Bid` | `cid` | N | 캠페인 식별자 |
 | `Bid` | `crid` | N | 광고 소재 식별자 |
 | `Bid` | `adomain` | N | 광고주 도메인 |
-| `Bid` | `mtype` | Y | 배너 `1`, 동영상 `2`, 네이티브 `4` |
-| `Bid` | `adm` | 조건부 | 동영상/네이티브 응답의 광고 마크업 |
+| `Bid` | `mtype` | Y | 배너 `1`, 동영상 `2` |
+| `Bid` | `adm` | 조건부 | 동영상 응답의 광고 마크업 |
 
 SSP의 BidResponse 검증 기준:
 
@@ -177,13 +203,15 @@ SSP의 BidResponse 검증 기준:
 - `Bid.price`는 원본 `Imp.bidfloor` 이상이어야 한다.
 - `cur`가 있으면 `USD`여야 한다.
 - `mtype`은 원본 요청의 광고 타입과 일치해야 한다.
-- 동영상/네이티브 응답은 `adm`을 가져야 한다.
+- 동영상 응답은 `adm`을 가져야 한다.
+
+현재 코드의 direct OpenRTB 호환 경로는 기존 shared model을 통해 `native` 필드를 읽을 수 있다. 다만 제품형 기본 입력인 provider-facing 경로에서는 `native` 요청을 생성하지 않으며, 이 문서의 기본 광고 범위는 배너와 단순 동영상으로 제한한다.
 
 `No-Bid`는 DSP가 해당 요청에 입찰하지 않는 정상 결과다. 내부 구현에서는 `NO_BID` 결과로 표현한다. OpenRTB 응답 형태가 필요한 테스트에서는 빈 `seatbid`를 사용할 수 있다.
 
 `timeout`과 `late bid`는 DSP가 반환하는 값이 아니다. SSP가 응답 마감 시각을 기준으로 관찰해 분류하는 상태다.
 
-### 2.5 SSP -> Auction Client: AuctionResult
+### 2.5 SSP -> Provider Slot Client: AuctionResult
 
 `AuctionResult`는 OpenRTB 표준 객체가 아니다. 경량 SSP가 여러 DSP 응답을 수집하고 낙찰자와 낙찰가를 결정한 뒤, 테스트 클라이언트가 결과를 확인할 수 있도록 반환하는 프로젝트 검증용 응답이다.
 
@@ -191,7 +219,7 @@ SSP의 BidResponse 검증 기준:
 |---|---|
 | `requestId` | 원본 `BidRequest.id` |
 | `impId` | 경매 대상 `Imp.id` |
-| `mediaType` | `BANNER`, `VIDEO`, `NATIVE` 중 하나 |
+| `mediaType` | 기본 provider-facing 경로에서는 `BANNER` 또는 `VIDEO` |
 | `status` | `WINNER`, `NO_WINNER`, `INVALID_REQUEST`, `UNSUPPORTED_REQUEST` 중 하나 |
 | `winnerDspId` | 낙찰된 경량 DSP 식별자 |
 | `winningBidId` | 낙찰된 `Bid.id` |
@@ -212,7 +240,7 @@ SSP의 BidResponse 검증 기준:
 | `pmp` 요청 | `UNSUPPORTED_REQUEST` |
 | `app` 요청 | `UNSUPPORTED_REQUEST` |
 | `USD` 외 통화 | `UNSUPPORTED_REQUEST` |
-| 외부 DSP HTTP 204 no-bid | 범위 밖 |
+| 외부 DSP HTTP 204 no-bid | 정상 `NO_BID` |
 | win notice / billing notice | 범위 밖 |
 | 광고 렌더링용 markup 검증 | 범위 밖 |
 
@@ -230,7 +258,7 @@ Campaign Snapshot은 다음 네 가지 축으로 제한한다.
 
 | 축 | 설명 | 예시 |
 |---|---|---|
-| 광고 타입 | 어떤 광고 요청에 입찰 가능한지 판단하기 위한 정보 | `banner`, `video`, `native` |
+| 광고 타입 | 어떤 광고 요청에 입찰 가능한지 판단하기 위한 정보 | 기본 범위는 `banner`, `video` |
 | 타겟 조건 | 요청이 캠페인 조건과 맞는지 판단하기 위한 정보 | 국가, 디바이스, 지면 카테고리, 배너 크기, 동영상 길이 |
 | 입찰 조건 | 입찰 가능 여부와 입찰가를 결정하기 위한 정보 | 활성 여부, 기본 입찰가, 통화 |
 | 응답 정보 | OpenRTB BidResponse를 만들기 위한 최소 광고 소재 참조 정보 | `crid`, `adomain`, 테스트용 `adm` |
@@ -245,7 +273,7 @@ Campaign Snapshot은 다음 네 가지 축으로 제한한다.
 
 `Campaign Data Store`는 캠페인 원본 데이터의 기준 저장소다. DSP 프로세스가 재시작되더라도 같은 캠페인 데이터를 다시 읽을 수 있어야 하므로, 캠페인 데이터의 기준 출처를 DSP 내부 메모리에만 두지 않는다.
 
-Campaign Data Store에 저장되는 데이터는 3.1의 범위로 제한한다.
+Campaign Data Store에 저장되는 데이터는 3.1의 범위로 제한한다. 초기 provider-facing 시나리오에서는 배너와 단순 동영상 캠페인만 필요하다. direct OpenRTB 호환 경로의 기존 네이티브 모델은 기본 성능/기능 목표의 필수 축으로 보지 않는다.
 
 | 필드 | 설명 |
 |---|---|
@@ -306,20 +334,24 @@ DSP 내부 Repository/Index의 책임:
 
 ### 4.1 전체 요청 처리 흐름
 
-이 장은 BidRequest가 들어온 뒤 AuctionResult가 반환될 때까지의 메인 시나리오를 구현 관점에서 설명한다.
+이 장은 ProviderSlotRequest가 들어온 뒤 SSP가 BidRequest를 생성하고 AuctionResult가 반환될 때까지의 메인 시나리오를 구현 관점에서 설명한다.
 
 상세 검증 규칙, 낙찰가 계산 규칙, 광고 타입별 처리 규칙은 5장과 6장에서 다룬다. 이 장에서는 요청이 어떤 책임을 거쳐 처리되는지만 정의한다.
 
 메인 시나리오:
 
-1. Auction Client가 경량 SSP에 테스트용 경매 시작 요청을 보낸다.
-2. 경량 SSP는 OpenRTB BidRequest를 추출하고 처리 가능한 요청인지 확인한다.
-3. 경량 SSP는 경매 제한 시간을 정하고 여러 경량 DSP에 같은 BidRequest를 전달한다.
-4. 경량 DSP는 Campaign Snapshot을 기준으로 입찰 가능 여부를 판단한다.
-5. 경량 DSP는 BidResponse 또는 no-bid를 경량 SSP에 반환한다.
-6. 경량 SSP는 제한 시간 안에 도착한 응답만 낙찰 후보로 본다.
-7. 경량 SSP는 잘못된 응답을 제외하고 낙찰자와 낙찰가를 결정한다.
-8. 경량 SSP는 AuctionResult를 Auction Client에 반환한다.
+1. Provider Slot Client가 경량 SSP에 ProviderSlotRequest를 보낸다.
+2. Slot Request Handler가 provider, placement, 광고 타입, 슬롯 제약을 검증한다.
+3. Inventory Catalog가 placement 설정을 찾고 요청 조건과 호환되는지 확인한다.
+4. BidRequest Factory가 inventory와 slot request를 조합해 OpenRTB BidRequest를 생성한다.
+5. Auction Flow가 경매 제한 시간을 정하고 여러 경량 DSP에 같은 BidRequest를 전달한다.
+6. 경량 DSP는 Campaign Snapshot을 기준으로 입찰 가능 여부를 판단한다.
+7. 경량 DSP는 BidResponse 또는 no-bid를 경량 SSP에 반환한다.
+8. 경량 SSP는 제한 시간 안에 도착한 응답만 낙찰 후보로 본다.
+9. 경량 SSP는 잘못된 응답을 제외하고 낙찰자와 낙찰가를 결정한다.
+10. 경량 SSP는 AuctionResult를 Provider Slot Client에 반환한다.
+
+direct `POST /openrtb/auction` 경로는 보조 경로다. 이 경로에서는 2~4단계를 건너뛰고 이미 만들어진 BidRequest를 Request Handler가 검증한 뒤 Auction Flow로 넘긴다.
 
 ### 4.2 C3: Runtime Components
 
@@ -332,10 +364,12 @@ DSP 내부 Repository/Index의 책임:
 
 ```mermaid
 flowchart LR
-    client["Auction Client"]
+    client["Slot Client"]
 
     subgraph ssp["Lightweight SSP Application"]
-        sspRequest["Request Handler"]
+        slotRequest["Slot Request Handler"]
+        inventory["Inventory Catalog"]
+        bidRequest["BidRequest Factory"]
         auctionFlow["Auction Flow"]
         dspGateway["DSP Gateway"]
         bidJudge["Bid Judge"]
@@ -350,8 +384,10 @@ flowchart LR
         bidBuilder["Bid Builder"]
     end
 
-    client -->|"BidRequest"| sspRequest
-    sspRequest --> auctionFlow
+    client -->|"ProviderSlotRequest"| slotRequest
+    slotRequest --> inventory
+    inventory --> bidRequest
+    bidRequest --> auctionFlow
     auctionFlow --> dspGateway
     dspGateway -->|"BidRequest"| bidHandler
 
@@ -372,7 +408,10 @@ flowchart LR
 
 | 컴포넌트 | 책임 |
 |---|---|
-| `Request Handler` | Auction Client 요청을 받고 OpenRTB BidRequest payload를 경매 흐름에 넘긴다. |
+| `Slot Request Handler` | ProviderSlotRequest를 받고 provider, placement, 광고 타입, 슬롯 조건을 검증한다. |
+| `Inventory Catalog` | provider/placement 기준으로 SSP의 공급 지면 설정을 조회한다. |
+| `BidRequest Factory` | 검증된 slot request와 inventory 설정으로 OpenRTB BidRequest를 생성한다. |
+| `Request Handler` | direct OpenRTB benchmark/test path에서 이미 만들어진 BidRequest를 검증한다. |
 | `Auction Flow` | 경매 제한 시간 설정, DSP 호출 순서, 응답 수집 흐름을 조율한다. |
 | `DSP Gateway` | 경량 DSP에 BidRequest를 전달하고 BidResponse 또는 no-bid를 받는다. |
 | `Bid Judge` | timeout, late bid, invalid bid, no-bid를 구분하고 낙찰 후보를 만든다. |
@@ -400,7 +439,10 @@ C3 컴포넌트 이름은 코드 파일명과 반드시 같을 필요는 없다.
 
 | C3 컴포넌트 | 코드 패키지 | 경계 의미 |
 |---|---|---|
-| `Request Handler` | `com.bbororo.rtb.ssp.requesthandler` | OpenRTB 요청을 내부 경매 요청으로 정규화한다. |
+| `Slot Request Handler` | `com.bbororo.rtb.ssp.slotrequest` | provider-facing slot request를 검증하고 inventory 조회 입력으로 정규화한다. |
+| `Inventory Catalog` | `com.bbororo.rtb.ssp.inventory` | SSP 공급 지면 설정을 제공한다. |
+| `BidRequest Factory` | `com.bbororo.rtb.ssp.bidrequest` | slot request와 inventory로 OpenRTB BidRequest를 생성한다. |
+| `Request Handler` | `com.bbororo.rtb.ssp.requesthandler` | direct OpenRTB benchmark/test path의 BidRequest를 검증한다. |
 | `Auction Flow` | `com.bbororo.rtb.ssp.auctionflow` | deadline 계산, DSP 호출, 응답 수집, 판단 흐름을 조율한다. |
 | `DSP Gateway` | `com.bbororo.rtb.ssp.dspgateway` | DSP 호출 결과를 SSP 내부 결과로 표현한다. |
 | `Bid Judge` | `com.bbororo.rtb.ssp.bidjudge` | DSP 응답을 낙찰 후보로 사용할 수 있는지 분류한다. |
@@ -430,16 +472,19 @@ C3 컴포넌트 이름은 코드 파일명과 반드시 같을 필요는 없다.
 
 SSP 내부 협력 흐름:
 
-1. `Request Handler`가 테스트 요청에서 OpenRTB BidRequest를 읽고 내부 경매 요청으로 정규화한다.
-2. `Auction Flow`가 경매 deadline을 정하고 DSP 호출과 응답 수집을 조율한다.
-3. `DSP Gateway`가 경량 DSP에 BidRequest를 전달하고 응답 상태를 수집한다.
-4. `Bid Judge`가 응답을 bid, no-bid, timeout, late bid, invalid bid로 분류한다.
-5. `Winner Selector`가 유효한 bid 후보 중 낙찰자와 낙찰가를 결정한다.
-6. SSP는 AuctionResult를 만들어 Auction Client에 반환한다.
+1. `Slot Request Handler`가 ProviderSlotRequest를 검증한다.
+2. `Inventory Catalog`가 provider/placement 설정을 제공한다.
+3. `BidRequest Factory`가 OpenRTB BidRequest를 생성한다.
+4. `Auction Flow`가 경매 deadline을 정하고 DSP 호출과 응답 수집을 조율한다.
+5. `DSP Gateway`가 경량 DSP에 BidRequest를 전달하고 응답 상태를 수집한다.
+6. `Bid Judge`가 응답을 bid, no-bid, timeout, late bid, invalid bid로 분류한다.
+7. `Winner Selector`가 유효한 bid 후보 중 낙찰자와 낙찰가를 결정한다.
+8. SSP는 AuctionResult를 만들어 Provider Slot Client에 반환한다.
 
 SSP가 판단하는 것:
 
 - 요청이 경매를 시작할 수 있는 형식인지
+- provider/placement와 슬롯 제약이 SSP inventory와 맞는지
 - 어떤 timeout/deadline을 적용할지
 - DSP 응답이 제한 시간 안에 도착했는지
 - DSP 응답이 원 요청과 일치하는 유효한 bid인지
@@ -452,39 +497,42 @@ SSP가 판단하지 않는 것:
 - DSP가 얼마로 입찰할지
 - 어떤 광고 소재를 응답에 포함할지
 
-### 5.2 Request Handler
+### 5.2 Slot Request Handler와 BidRequest 생성
 
-`Request Handler`는 Auction Client 요청을 받고, OpenRTB BidRequest에서 이 시스템이 지원하는 필드만 검증/정규화한다.
+`Slot Request Handler`는 ProviderSlotRequest에서 이 시스템이 지원하는 필드만 검증/정규화한다.
 
-Request Handler는 원본 OpenRTB BidRequest 객체를 전체 SSP 흐름에 그대로 들고 다니지 않는다. 대신 지원 필드만 추출해 내부 경매 요청을 만든다. 이 결정은 지원 범위를 명확히 하고, 검증되지 않은 OpenRTB 필드가 다른 컴포넌트에서 우연히 사용되는 일을 막기 위한 것이다.
+Slot Request Handler는 provider-facing 요청을 OpenRTB 객체처럼 다루지 않는다. provider-facing 요청은 provider id, placement id, 광고 타입, 슬롯 제약만 표현하고, OpenRTB BidRequest는 SSP 내부에서 생성한다. 이 분리는 실제 경계와 책임을 맞추기 위한 것이다.
 
-광고 타입도 같은 원칙을 따른다. 외부 `Imp`에는 `mediaType` 필드를 두지 않고 `banner`, `video`, `native` 객체를 둔다. Request Handler는 이 중 정확히 하나를 해석해 내부 `mediaType`으로 정규화한다.
+검증된 slot request는 Inventory Catalog를 통해 placement 설정과 연결된다.
 
-내부 경매 요청:
-
-| 필드 | 필요성 | 없을 때 처리 |
+| 입력 | 검증 또는 조회 기준 | 실패 처리 |
 |---|---|---|
-| `requestId` | 원 요청 식별, BidResponse.id 검증, AuctionResult 추적에 사용 | `INVALID_REQUEST` |
-| `impId` | Bid.impid 검증과 AuctionResult 추적에 사용 | `INVALID_REQUEST` |
-| `mediaType` | 지원 광고 타입 판단, DSP 응답의 mtype 검증에 사용 | `INVALID_REQUEST` 또는 `UNSUPPORTED_REQUEST` |
-| `bidfloor` | 최소 입찰가 검증에 사용 | `0` |
-| `bidfloorcur` | 입찰가와 floor price 통화 비교에 사용 | `USD` |
-| `tmax` | 경매 제한 시간 계산에 사용 | 시스템 기본 timeout |
-| `auctionType` | 낙찰가 계산 방식 결정에 사용 | First Price |
-| `site` | DSP가 지면 조건을 판단할 때 사용할 수 있는 정보 | 없으면 빈 값 |
-| `device` | DSP가 디바이스/지역 조건을 판단할 때 사용할 수 있는 정보 | 없으면 빈 값 |
-| `mediaSpec` | banner/video/native 타입별 필수 조건 | 타입별 필수 필드가 없으면 `INVALID_REQUEST` |
-| `receivedAt` | deadline, elapsedMs, late bid 판단의 기준 시각 | 요청 수신 시 기록 |
+| `providerId` | provider 식별자 존재 | `INVALID_REQUEST` 또는 `UNSUPPORTED_REQUEST` |
+| `placementId` | provider 소유 placement 존재와 활성 상태 | `INVALID_REQUEST` 또는 `UNSUPPORTED_REQUEST` |
+| `mediaType` | provider-facing 기본 범위인 `banner`, `video` | `UNSUPPORTED_REQUEST` |
+| `width`, `height` | banner placement 크기와 일치 | `INVALID_REQUEST` 또는 `UNSUPPORTED_REQUEST` |
+| `mimes`, `minDuration`, `maxDuration`, `protocols` | video placement 조건과 호환 | `INVALID_REQUEST` 또는 `UNSUPPORTED_REQUEST` |
+| `tmax` | 양수이면 요청 힌트로 사용 | `INVALID_REQUEST` |
 
-검증 기준은 2.3의 BidRequest 계약을 따른다. Request Handler는 경매 성립에 필요한 구조 검증까지만 담당하고, 캠페인 적합성 판단은 DSP에 남긴다.
+`BidRequest Factory`는 검증된 slot request와 inventory placement를 조합해 DSP에 전달할 OpenRTB BidRequest를 만든다.
 
-정규화된 내부 요청을 기준으로 DSP Gateway가 DSP에 보낼 OpenRTB BidRequest를 구성한다. 따라서 DSP로 전달되는 요청도 이 시스템이 지원한다고 명시한 범위 안에 머문다.
+| 생성 필드 | 기준 |
+|---|---|
+| `BidRequest.id` | SSP가 생성한 요청 식별자 |
+| `BidRequest.imp[0].id` | placement 또는 요청 단위에서 파생한 impression 식별자 |
+| `Imp.banner` / `Imp.video` | inventory media spec과 slot request 제약 |
+| `Imp.bidfloor` | inventory placement의 floor |
+| `Imp.bidfloorcur` | `USD` |
+| `tmax` | slot request 힌트, placement 기본값, 시스템 기본값 순서로 결정 |
+| `at` | First Price |
+
+direct `POST /openrtb/auction` 경로의 `Request Handler`는 이미 만들어진 OpenRTB BidRequest를 검증하는 보조 컴포넌트다. 이 경로도 원본 OpenRTB 객체를 무제한으로 신뢰하지 않고, 지원 필드만 내부 경매 요청으로 정규화한 뒤 Auction Flow에 넘긴다.
 
 ### 5.3 Auction Flow
 
 `Auction Flow`는 경매의 시간 경계와 전체 진행 순서를 책임진다.
 
-Auction Flow는 Request Handler가 만든 내부 경매 요청을 받아 다음 작업을 수행한다.
+Auction Flow는 BidRequest Factory가 만든 OpenRTB BidRequest와 내부 경매 요청을 받아 다음 작업을 수행한다. direct OpenRTB 경로에서는 Request Handler가 같은 형태의 내부 경매 요청을 만든다.
 
 - 경매 deadline 계산
 - 호출할 DSP 목록 결정
@@ -555,7 +603,7 @@ invalid bid 기준:
 | `Bid.price < bidfloor` | `INVALID_BID` |
 | 응답 통화가 `USD`가 아님 | `INVALID_BID` |
 | `Bid.mtype`이 요청 광고 타입과 다름 | `INVALID_BID` |
-| video/native 응답에 필요한 `adm`이 없음 | `INVALID_BID` |
+| video 응답에 필요한 `adm`이 없음 | `INVALID_BID` |
 | deadline 이후 도착함 | `LATE_BID` |
 
 Bid Judge가 만든 유효 후보만 Winner Selector로 전달한다.
@@ -639,7 +687,7 @@ DSP 내부 메시지 흐름:
 
 DSP는 SSP가 이미 검증한 요청을 받더라도 최소 검증을 수행한다. DSP는 독립 컴포넌트이며, 잘못된 요청이 캠페인 매칭이나 가격 산정까지 흘러 들어가면 원인 분석이 어려워지기 때문이다.
 
-Bid Handler 역시 OpenRTB 경계 객체를 그대로 내부 판단 로직에 퍼뜨리지 않는다. `Imp.banner`, `Imp.video`, `Imp.native` 계열 객체를 해석해 `BidContext.mediaType`과 타입별 조건으로 정규화한 뒤 Campaign Lookup 이후 단계로 넘긴다.
+Bid Handler 역시 OpenRTB 경계 객체를 그대로 내부 판단 로직에 퍼뜨리지 않는다. 기본 경로에서 생성되는 `Imp.banner`, `Imp.video` 객체를 해석해 `BidContext.mediaType`과 타입별 조건으로 정규화한 뒤 Campaign Lookup 이후 단계로 넘긴다. direct OpenRTB 호환 경로에서 들어온 기존 `Imp.native` 모델은 기본 광고 범위의 성능/기능 목표가 아니다.
 
 BidContext:
 
@@ -654,7 +702,7 @@ BidContext:
 | `tmax` | DSP 내부 처리 제한을 해석할 때 사용할 수 있는 값 |
 | `site` | 지면 카테고리 또는 도메인 조건 판단에 사용 |
 | `device` | 국가, 지역, 디바이스 조건 판단에 사용 |
-| `mediaSpec` | 배너 크기, 동영상 길이, 네이티브 요청 조건 판단에 사용 |
+| `mediaSpec` | 배너 크기와 동영상 조건 판단에 사용 |
 
 Bid Handler는 지원하지 않는 광고 타입, 필수 필드 누락, 지원하지 않는 통화를 발견하면 입찰 판단을 중단한다. 이 경우 DSP는 bid를 만들지 않는다.
 
@@ -670,7 +718,7 @@ Campaign Snapshot은 다음 묶음으로 구성한다.
 |---|---|
 | 캠페인 식별 정보 | `campaignId`, `advertiserId`, `seat` |
 | 상태와 타입 | 활성 여부, 지원 광고 타입 |
-| 타겟 조건 | 국가, 디바이스, 지면, 배너 크기, 동영상 조건, 네이티브 지원 여부 |
+| 타겟 조건 | 국가, 디바이스, 지면, 배너 크기, 동영상 조건 |
 | 입찰 정책 | 기본 입찰가, 최대 입찰가, 통화 |
 | 소재 정보 | `creativeId`, `adomain`, 테스트용 `adm` |
 
@@ -692,10 +740,9 @@ Matcher가 평가하는 조건:
 
 | 조건 | 설명 |
 |---|---|
-| 광고 타입 | 요청의 `banner`, `video`, `native`와 캠페인 광고 타입이 맞는지 |
+| 광고 타입 | 요청의 `banner`, `video`와 캠페인 광고 타입이 맞는지 |
 | 배너 크기 | banner 요청의 `w`, `h`가 캠페인 지원 크기와 맞는지 |
 | 동영상 조건 | video 요청의 MIME, 재생 시간, protocol이 캠페인 조건과 맞는지 |
-| 네이티브 조건 | native 요청을 캠페인이 처리할 수 있는지 |
 | 지역/국가 | device 또는 geo 정보가 캠페인 타겟과 맞는지 |
 | 디바이스 | 모바일/데스크톱, OS 같은 조건이 맞는지 |
 | 지면 | site category 또는 domain 조건이 맞는지 |
@@ -912,7 +959,7 @@ AuctionResult에는 `NO_WINNER` 상태와 함께 `dspResultCounts`를 포함해 
 
 이 장은 RTB hot path가 제한 시간 안에 올바른 경매 결과를 반환하는지 확인하기 위한 측정 지표, 테스트 시나리오, 결과 해석 기준을 정의한다.
 
-테스트 대상은 BidRequest 수신부터 AuctionResult 반환까지다. 광고 렌더링, 노출/클릭/전환 추적, 과금, 리포팅은 테스트 범위에 포함하지 않는다.
+테스트 대상은 ProviderSlotRequest 수신부터 SSP의 BidRequest 생성, DSP fan-out, AuctionResult 반환까지다. 광고 렌더링, 노출/클릭/전환 추적, 과금, 리포팅은 테스트 범위에 포함하지 않는다.
 
 ### 8.1 측정 원칙
 
@@ -944,7 +991,7 @@ AuctionResult에는 `NO_WINNER` 상태와 함께 `dspResultCounts`를 포함해 
 
 | 지표 | 의미 |
 |---|---|
-| `latency p50/p95/p99` | Auction Client 요청 수신부터 AuctionResult 반환까지의 응답 시간 분포 |
+| `latency p50/p95/p99` | Provider Slot Client 요청 수신부터 AuctionResult 반환까지의 응답 시간 분포 |
 | `deadline compliance` | 제한 시간 안에 경매 결과를 반환한 비율 |
 | `observed throughput` | 테스트 환경에서 관찰된 초당 처리 요청 수 |
 | `winner rate` | 전체 요청 중 낙찰자가 결정된 비율 |
@@ -976,7 +1023,7 @@ AuctionResult에는 `NO_WINNER` 상태와 함께 `dspResultCounts`를 포함해 
 
 기본 사이클:
 
-1. E2E smoke test로 BidRequest부터 AuctionResult까지의 hot path baseline을 만든다.
+1. E2E smoke test로 ProviderSlotRequest부터 AuctionResult까지의 hot path baseline을 만든다.
 2. 같은 조건에서 p95/p99 latency, deadline compliance, 상태별 결과 분포를 측정한다.
 3. 측정 결과를 바탕으로 병목 후보를 정한다.
 4. 병목 개선을 위해 리팩토링 또는 최적화를 수행한다.
@@ -1000,7 +1047,7 @@ AuctionResult에는 `NO_WINNER` 상태와 함께 `dspResultCounts`를 포함해 
 | C3 architecture test | SSP/DSP 내부 C3 컴포넌트 패키지 의존 방향 | C3 다이어그램의 협력 방향을 코드 패키지 경계로 검증한다. |
 | Component interface | C3 컴포넌트 입력/출력 타입 | 구현체가 정해진 메시지 형태를 따르게 한다. |
 | Container interface | SSP-DSP 사이 OpenRTB subset 모델 | 경량 SSP와 경량 DSP 사이의 연결 형식을 코드 타입으로 고정한다. |
-| E2E smoke test | BidRequest부터 AuctionResult까지의 전체 흐름 | 사용자 시나리오 관점에서 hot path가 끝까지 동작하는지 확인한다. |
+| E2E smoke test | ProviderSlotRequest부터 AuctionResult까지의 전체 흐름 | 사용자 시나리오 관점에서 hot path가 끝까지 동작하는지 확인한다. |
 
 별도의 contract test 계층은 두지 않는다. 내부 컴포넌트 간 시그니처 계약은 interface와 compiler에 맡기고, 의미 규칙은 리팩토링 또는 최적화 과정에서 필요한 영역에 unit/integration test로 추가한다. 이 원칙은 내부 메시지 흐름을 과도하게 고정해 리팩토링을 방해하지 않기 위한 것이다.
 
@@ -1087,7 +1134,7 @@ SSP는 각 인스턴스가 같은 코드로 실행되는지 알지 못한다. SS
 현재 첫 단계는 k6 smoke test다. 대상 시나리오는 단일 메인 시나리오다.
 
 ```text
-BidRequest -> SSP -> DSP 4개 -> SSP 낙찰 판단 -> AuctionResult
+ProviderSlotRequest -> SSP BidRequest 생성 -> DSP 4개 -> SSP 낙찰 판단 -> AuctionResult
 ```
 
 Smoke test는 성능 한계를 측정하지 않는다. `status=WINNER`, 기본 topology의 `winnerDspId=dsp-b`, DSP 결과 분포가 기대값과 일치하는지 확인하고, SSP/DSP `/metrics`에 RTB metric이 생성되는지 확인한다.
@@ -1119,7 +1166,7 @@ Load baseline 스크립트는 아직 latency threshold로 실패하지 않는다
 | 동시 요청 수 증가 | SSP 요청 처리와 DSP fan-out이 p95/p99에 미치는 영향 |
 | DSP 수 증가 | 호출 대상 증가가 응답 수집 시간과 timeout 비율에 미치는 영향 |
 | 캠페인 수 증가 | Campaign Lookup이 p95/p99에 미치는 영향 |
-| 광고 타입 혼합 | banner/video/native 요청 처리 차이 확인 |
+| 광고 타입 혼합 | banner/video 요청 처리 차이 확인 |
 | no-bid 비율 증가 | 정상 비입찰이 no-winner와 결과 분포에 미치는 영향 |
 | timeout DSP 포함 | 일부 DSP 지연이 전체 경매에 미치는 영향 |
 | invalid bid 포함 | Bid Judge 검증과 제외 처리가 안정적인지 확인 |

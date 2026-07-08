@@ -31,7 +31,7 @@ RTB에서는 모든 비정상처럼 보이는 결과가 장애는 아니다. `NO
 
 | Metric | Type | Tags | Purpose |
 |---|---|---|---|
-| `rtb_ssp_auction_duration` | Timer | `media_type`, `result` | Auction Client 요청부터 AuctionResult 반환까지의 지연 시간 |
+| `rtb_ssp_auction_duration` | Timer | `media_type`, `result` | Provider Slot Client 요청부터 AuctionResult 반환까지의 지연 시간 |
 | `rtb_ssp_auction_result_total` | Counter | `media_type`, `result` | winner, no-winner, invalid request, unsupported request 분포 |
 | `rtb_ssp_dsp_call_duration` | Timer | `dsp_id`, `result` | SSP가 DSP 하나를 호출하고 결과를 분류하기까지의 지연 시간 |
 | `rtb_ssp_dsp_call_result_total` | Counter | `dsp_id`, `result` | DSP별 bid, no-bid, timeout, late bid, error 분포 |
@@ -68,7 +68,7 @@ Prometheus에서는 label, Micrometer에서는 tag라고 부른다. tag는 metri
 Allowed:
 
 - `app`: `ssp`, `dsp`
-- `media_type`: `banner`, `video`, `native`, `unknown`
+- `media_type`: `banner`, `video`, `unknown`; direct OpenRTB 호환 경로를 명시적으로 사용할 때는 기존 `native` label도 관찰될 수 있다.
 - `result`: `winner`, `no_winner`, `bid`, `no_bid`, `timeout`, `late_bid`, `invalid_bid`, `error`
 - `reason`: `no_campaign`, `no_matched_campaign`, `bid_below_floor`, `missing_creative`, `invalid_request`, `unsupported_request`
 - `dsp_id`: 테스트에서 사용하는 고정된 경량 DSP 식별자
@@ -295,7 +295,7 @@ Grafana Cloud Application Observability에서 다음을 확인한다.
 
 | Service | Expected role |
 |---|---|
-| `rtb-ssp` | `/openrtb/auction` inbound request와 DSP fan-out outbound HTTP call |
+| `rtb-ssp` | `/publisher/auction` inbound request와 DSP fan-out outbound HTTP call |
 | `rtb-dsp-a` | 정상 medium bid DSP inbound request |
 | `rtb-dsp-b` | 정상 high bid DSP inbound request |
 | `rtb-dsp-c` | no-bid DSP inbound request |
@@ -326,7 +326,7 @@ OTEL_TRACES_SAMPLER_ARG=0.10
 
 ```text
 Grafana Cloud k6
- -> https://13-125-82-244.sslip.io/openrtb/auction
+ -> https://13-125-82-244.sslip.io/publisher/auction
  -> AWS EC2 SSP
  -> DSP-A/B/C/D
 ```

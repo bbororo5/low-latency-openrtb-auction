@@ -1,9 +1,9 @@
 flowchart LR
-    publisher["Auction Client"]
+    publisher["Slot Client"]
     advertiser["Campaign Setup"]
     system["RTB Bidding System"]
 
-    publisher -->|"BidRequest"| system
+    publisher -->|"ProviderSlotRequest"| system
     system -->|"AuctionResult"| publisher
 
     advertiser -->|"Campaign data"| system

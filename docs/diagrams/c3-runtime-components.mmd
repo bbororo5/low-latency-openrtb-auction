@@ -1,8 +1,10 @@
 flowchart LR
-    client["Auction Client"]
+    client["Slot Client"]
 
     subgraph ssp["Lightweight SSP Application"]
-        sspRequest["Request Handler"]
+        slotRequest["Slot Request Handler"]
+        inventory["Inventory Catalog"]
+        bidRequest["BidRequest Factory"]
         auctionFlow["Auction Flow"]
         dspGateway["DSP Gateway"]
         bidJudge["Bid Judge"]
@@ -17,8 +19,10 @@ flowchart LR
         bidBuilder["Bid Builder"]
     end
 
-    client -->|"BidRequest"| sspRequest
-    sspRequest --> auctionFlow
+    client -->|"ProviderSlotRequest"| slotRequest
+    slotRequest --> inventory
+    inventory --> bidRequest
+    bidRequest --> auctionFlow
     auctionFlow --> dspGateway
     dspGateway -->|"BidRequest"| bidHandler
 
