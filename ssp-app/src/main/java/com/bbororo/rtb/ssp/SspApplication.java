@@ -7,7 +7,9 @@ import com.bbororo.rtb.shared.observability.RuntimeMetrics;
 import com.bbororo.rtb.shared.openrtb.codec.JacksonOpenRtbJsonCodec;
 import com.bbororo.rtb.shared.openrtb.codec.OpenRtbJsonCodec;
 import com.bbororo.rtb.ssp.adapter.web.JdkSspHttpServer;
+import com.bbororo.rtb.ssp.adapter.web.OkHttpHandler;
 import com.bbororo.rtb.ssp.adapter.web.OpenRtbAuctionHttpHandler;
+import com.bbororo.rtb.ssp.adapter.web.OpenRtbJsonBaselineHttpHandler;
 import com.bbororo.rtb.ssp.auctionflow.AuctionFlow;
 import com.bbororo.rtb.ssp.auctionflow.DefaultAuctionDeadlinePolicy;
 import com.bbororo.rtb.ssp.auctionflow.DefaultAuctionFlow;
@@ -27,6 +29,7 @@ import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 public final class SspApplication {
 
@@ -53,7 +56,11 @@ public final class SspApplication {
         return new JdkSspHttpServer(
                 port,
                 new OpenRtbAuctionHttpHandler(codec, new DefaultRequestHandler(), auctionFlow, metrics),
-                new PrometheusMetricsHttpHandler(registry)
+                new PrometheusMetricsHttpHandler(registry),
+                Map.of(
+                        JdkSspHttpServer.OK_PATH, new OkHttpHandler(),
+                        JdkSspHttpServer.JSON_BASELINE_PATH, new OpenRtbJsonBaselineHttpHandler(codec)
+                )
         );
     }
 

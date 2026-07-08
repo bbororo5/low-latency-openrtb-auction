@@ -7,6 +7,8 @@
 | Type | Purpose | Current Status |
 |---|---|---|
 | Smoke | 메인 시나리오와 관찰 지표 파이프라인이 정상인지 확인 | `smoke.js` |
+| HTTP OK baseline | 비즈니스 로직 없는 HTTP/JDK HttpServer 기준점 확인 | `http-ok-baseline.js` |
+| OpenRTB JSON baseline | DSP fan-out 없는 JSON decode/encode 기준점 확인 | `openrtb-json-baseline.js` |
 | Capacity | timeout DSP를 제외하고 순수 경매 처리량 한계 확인 | `load-capacity.js` |
 | Timeout resilience | timeout DSP가 있을 때 deadline 격리 확인 | `load-baseline.js` |
 | Stress | 부하를 올리며 시스템 한계와 병목 지점 확인 | `load-capacity.js` 사용 |
@@ -65,6 +67,44 @@ BASE_URL=http://localhost:8080 k6 run performance/k6/smoke.js
 ```bash
 docker compose -f docker-compose.perf.yml down
 ```
+
+## Zero-base Baselines
+
+전통적인 JSON over HTTP RTB baseline을 잡기 전에, 같은 EC2/Docker/JVM/JDK HttpServer 조건에서 더 얇은 기준점을 먼저 측정한다.
+
+| Baseline | Endpoint | Excluded cost | Purpose |
+|---|---|---|---|
+| HTTP OK | `GET /ok` | JSON codec, OpenRTB object, auction, DSP call | VM + Docker + JVM + JDK HttpServer + HTTP/1.1의 순수 기준점 |
+| OpenRTB JSON | `POST /baseline/openrtb-json` | auction, DSP fan-out, winner selection | OpenRTB JSON parse/serialize 비용 기준점 |
+
+실행:
+
+```bash
+docker compose -f docker-compose.perf.yml up --build -d ssp prometheus
+```
+
+```bash
+RPS=100 DURATION=1m docker compose -f docker-compose.perf.yml --profile test run --rm k6-http-ok-baseline
+RPS=100 DURATION=1m docker compose -f docker-compose.perf.yml --profile test run --rm k6-openrtb-json-baseline
+```
+
+계단식 측정 예:
+
+```bash
+for rps in 100 300 500 1000 1500 2000; do
+  RPS=$rps DURATION=1m PRE_ALLOCATED_VUS=$rps MAX_VUS=$((rps * 2)) \
+    docker compose -f docker-compose.perf.yml --profile test run --rm k6-http-ok-baseline
+done
+```
+
+```bash
+for rps in 100 300 500 1000 1500 2000; do
+  RPS=$rps DURATION=1m PRE_ALLOCATED_VUS=$rps MAX_VUS=$((rps * 2)) \
+    docker compose -f docker-compose.perf.yml --profile test run --rm k6-openrtb-json-baseline
+done
+```
+
+이 두 결과는 이후 실제 `/openrtb/auction` 결과와 비교한다. 예를 들어 `/ok`와 JSON baseline은 안정적인데 실제 경매만 무너지면 VM이나 HTTP 서버 자체보다 SSP-DSP fan-out, executor, DSP 응답 처리, 도메인 로직 쪽을 먼저 의심한다.
 
 ## Load Capacity Baseline
 

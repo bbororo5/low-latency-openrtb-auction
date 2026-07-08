@@ -5,12 +5,15 @@ import com.sun.net.httpserver.HttpServer;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Executors;
 
 public final class JdkSspHttpServer {
 
     public static final String AUCTION_PATH = "/openrtb/auction";
+    public static final String OK_PATH = "/ok";
+    public static final String JSON_BASELINE_PATH = "/baseline/openrtb-json";
 
     private final HttpServer server;
 
@@ -19,16 +22,36 @@ public final class JdkSspHttpServer {
     }
 
     public JdkSspHttpServer(int port, HttpHandler auctionHandler, HttpHandler metricsHandler) {
-        this(createServer(port), auctionHandler, metricsHandler);
+        this(createServer(port), auctionHandler, metricsHandler, Map.of());
     }
 
     JdkSspHttpServer(HttpServer server, HttpHandler auctionHandler, HttpHandler metricsHandler) {
+        this(server, auctionHandler, metricsHandler, Map.of());
+    }
+
+    JdkSspHttpServer(
+            HttpServer server,
+            HttpHandler auctionHandler,
+            HttpHandler metricsHandler,
+            Map<String, HttpHandler> baselineHandlers
+    ) {
         this.server = Objects.requireNonNull(server, "server must not be null");
         this.server.createContext(AUCTION_PATH, Objects.requireNonNull(auctionHandler, "auctionHandler must not be null"));
         if (metricsHandler != null) {
             this.server.createContext("/metrics", metricsHandler);
         }
+        Objects.requireNonNull(baselineHandlers, "baselineHandlers must not be null")
+                .forEach((path, handler) -> this.server.createContext(path, handler));
         this.server.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
+    }
+
+    public JdkSspHttpServer(
+            int port,
+            HttpHandler auctionHandler,
+            HttpHandler metricsHandler,
+            Map<String, HttpHandler> baselineHandlers
+    ) {
+        this(createServer(port), auctionHandler, metricsHandler, baselineHandlers);
     }
 
     public void start() {
