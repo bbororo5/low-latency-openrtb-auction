@@ -1,0 +1,53 @@
+x-otel-common: &otel-common
+  JAVA_TOOL_OPTIONS: "-javaagent:/otel/opentelemetry-javaagent.jar"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4318"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+  OTEL_TRACES_EXPORTER: "otlp"
+  OTEL_METRICS_EXPORTER: "otlp"
+  OTEL_LOGS_EXPORTER: "none"
+  OTEL_TRACES_SAMPLER: "${OTEL_TRACES_SAMPLER:-parentbased_traceidratio}"
+  OTEL_TRACES_SAMPLER_ARG: "${OTEL_TRACES_SAMPLER_ARG:-0.10}"
+  OTEL_RESOURCE_ATTRIBUTES: "project=low-latency-openrtb-auction,service.namespace=rtb,deployment.environment=aws-perf,service.version=0.1.0-SNAPSHOT"
+
+services:
+  alloy:
+    image: grafana/alloy:v1.17.0
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/otel-cloud.alloy
+    env_file:
+      - path: ./.env.grafana-cloud
+        required: false
+    volumes:
+      - ./monitoring/alloy/otel-cloud.alloy:/etc/alloy/otel-cloud.alloy:ro
+      - alloy_data:/var/lib/alloy/data
+
+  ssp:
+    environment:
+      <<: *otel-common
+      OTEL_SERVICE_NAME: "rtb-ssp"
+
+  dsp-a:
+    environment:
+      <<: *otel-common
+      OTEL_SERVICE_NAME: "rtb-dsp-a"
+
+  dsp-b:
+    environment:
+      <<: *otel-common
+      OTEL_SERVICE_NAME: "rtb-dsp-b"
+
+  dsp-c:
+    environment:
+      <<: *otel-common
+      OTEL_SERVICE_NAME: "rtb-dsp-c"
+
+  dsp-d:
+    environment:
+      <<: *otel-common
+      OTEL_SERVICE_NAME: "rtb-dsp-d"
+
+volumes:
+  alloy_data:

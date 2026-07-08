@@ -120,6 +120,19 @@ SSP / DSP
 
 Spring Boot Actuator is not used in the baseline. Micrometer is used directly so that Prometheus/Grafana integration remains possible while keeping the HTTP server stack small.
 
+APM observability path:
+
+```text
+SSP / DSP
+ -> OpenTelemetry Java Agent
+ -> OTLP HTTP
+ -> Grafana Alloy
+ -> Grafana Cloud OTLP endpoint
+ -> Grafana Cloud Application Observability
+```
+
+APM은 기존 도메인 메트릭을 대체하지 않는다. `/metrics`는 경매 결과 품질, timeout/no-bid 분포, DSP별 지연을 집계하는 경로로 유지하고, OpenTelemetry는 요청 단위 trace와 서비스 간 호출 흐름을 확인하는 경로로 사용한다.
+
 Cloud observability path for AWS performance tests:
 
 ```text
@@ -181,6 +194,20 @@ docker compose -f docker-compose.perf.yml --profile test run --rm k6-smoke
 
 로컬 `k6-smoke`는 기능 확인용이다. 성능 측정용 부하 발생기는 Grafana Cloud k6를 사용한다.
 
+OpenTelemetry APM을 함께 켤 때는 Grafana Cloud OTLP credential을 준비한다.
+
+```bash
+cp .env.grafana-cloud.example .env.grafana-cloud
+```
+
+`.env.grafana-cloud`에는 Grafana Cloud OpenTelemetry connection tile에서 받은 값을 넣는다. 이 파일은 Git에 커밋하지 않는다.
+
+```bash
+docker compose --env-file .env.grafana-cloud -f docker-compose.perf.yml -f docker-compose.otel.yml up --build -d caddy alloy
+```
+
+이 override는 `JAVA_TOOL_OPTIONS=-javaagent:/otel/opentelemetry-javaagent.jar`로 Java Agent를 켠다. 기본 `docker-compose.perf.yml`만 실행하면 agent는 활성화되지 않는다.
+
 AWS target system의 public metrics endpoints:
 
 | Target | Purpose |
@@ -191,7 +218,7 @@ AWS target system의 public metrics endpoints:
 | `https://13-125-82-244.sslip.io/metrics/dsp-c` | DSP-C metrics |
 | `https://13-125-82-244.sslip.io/metrics/dsp-d` | DSP-D metrics |
 
-## 9. Grafana Cloud Monitoring
+## 9. Grafana Cloud Metrics Monitoring
 
 AWS 성능 측정에서는 EC2에 Grafana와 Prometheus를 함께 띄우지 않는다.
 
@@ -246,7 +273,54 @@ Runtime Saturation: 왜 깨졌는가?
 
 SSP DSP executor는 SSP가 여러 DSP로 HTTP 요청을 보낼 때 사용하는 제한된 worker pool이다. 이 값은 전체 JVM thread 수가 튀었을 때 원인이 DSP fan-out인지, executor queue 포화인지, 아니면 다른 runtime 문제인지 구분하기 위해 본다.
 
-## 10. Grafana Cloud k6
+## 10. Grafana Cloud APM
+
+OpenTelemetry APM은 다음 opt-in Compose override로 켠다.
+
+```bash
+docker compose --env-file .env.grafana-cloud -f docker-compose.perf.yml -f docker-compose.otel.yml up --build -d caddy alloy
+```
+
+수집 경로:
+
+```text
+SSP / DSP containers
+ -> OpenTelemetry Java Agent
+ -> alloy:4318
+ -> Grafana Alloy batch processor
+ -> Grafana Cloud OTLP endpoint
+```
+
+Grafana Cloud Application Observability에서 다음을 확인한다.
+
+| Service | Expected role |
+|---|---|
+| `rtb-ssp` | `/openrtb/auction` inbound request와 DSP fan-out outbound HTTP call |
+| `rtb-dsp-a` | 정상 medium bid DSP inbound request |
+| `rtb-dsp-b` | 정상 high bid DSP inbound request |
+| `rtb-dsp-c` | no-bid DSP inbound request |
+| `rtb-dsp-d` | timeout mode DSP inbound request |
+
+Smoke trace가 잘 보이지 않으면 검증 중에만 `.env.grafana-cloud`에서 sampling ratio를 올린다.
+
+```bash
+OTEL_TRACES_SAMPLER_ARG=1.0
+```
+
+검증 후에는 load test overhead와 ingestion 비용을 줄이기 위해 다시 기본값으로 돌린다.
+
+```bash
+OTEL_TRACES_SAMPLER_ARG=0.10
+```
+
+면접 방어 포인트:
+
+- Java Agent를 선택한 이유: 애플리케이션 코드 변경 없이 JDK HttpServer, Java HTTP Client, JVM runtime telemetry를 자동 수집할 수 있다.
+- Alloy를 선택한 이유: 애플리케이션이 Grafana Cloud로 직접 전송하지 않고, batch/retry/credential boundary를 collector 계층에 둔다.
+- Prometheus 메트릭을 유지하는 이유: RTB 도메인 질문인 auction result, timeout, no-bid reason, DSP별 latency는 명시적 Micrometer metric이 더 설명력이 높다.
+- Sampling을 두는 이유: RTB hot path에서는 모든 요청 trace를 저장하면 지연 overhead와 저장 비용이 커질 수 있으므로 기본 10%로 시작하고 검증 때만 100%로 올린다.
+
+## 11. Grafana Cloud k6
 
 성능 측정용 부하 발생기는 Grafana Cloud k6를 사용한다.
 
@@ -259,7 +333,7 @@ Grafana Cloud k6
 
 이 구조는 local Mac 또는 Docker Desktop 네트워크를 부하 테스트 경로에서 제거한다. 결과를 해석할 때는 Grafana Cloud k6의 load zone과 AWS region을 함께 기록한다.
 
-## 11. Prometheus Remote Write Alternative
+## 12. Prometheus Remote Write Alternative
 
 EC2 내부 scrape가 필요해지면 Prometheus remote_write 구성을 다시 사용할 수 있다.
 
