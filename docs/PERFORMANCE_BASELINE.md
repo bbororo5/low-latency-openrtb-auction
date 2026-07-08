@@ -70,6 +70,18 @@ host baseline
 
 This separates infrastructure ceiling, HTTP server cost, JSON serialization cost, and SSP-DSP fan-out cost before introducing a Protobuf optimization variant.
 
+Current single-VM JSON baseline result:
+
+| Layer | Stable baseline | First observed failure | Note |
+|---|---:|---:|---|
+| HTTP OK | `2000 RPS / 30s` | not reached | p95 `1.69ms`, p99 `6.72ms` at 2000 RPS |
+| OpenRTB JSON codec | `2000 RPS / 30s` | not reached | p95 `4.00ms`, p99 `12.83ms` at 2000 RPS |
+| RTB JSON capacity | `100 RPS / 30s` | `105 RPS / 30s` | HTTP failures stayed `0%`; domain checks failed first |
+
+Detailed record:
+
+- [AWS Single VM JSON Baseline - 2026-07-08](performance/2026-07-08-aws-single-vm-json-baseline.md)
+
 ## 4. Initial Load Baseline
 
 Commands:
