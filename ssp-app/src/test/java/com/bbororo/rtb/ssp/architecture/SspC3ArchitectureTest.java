@@ -49,6 +49,63 @@ class SspC3ArchitectureTest {
     }
 
     @Test
+    void inventory_must_depend_only_on_inventory_shared_and_jdk_packages() {
+        var classes = mainClasses();
+
+        ArchRule rule = classes()
+                .that().resideInAPackage("com.bbororo.rtb.ssp.inventory..")
+                .should().onlyDependOnClassesThat()
+                .resideInAnyPackage(
+                        "com.bbororo.rtb.ssp.inventory..",
+                        "com.bbororo.rtb.shared..",
+                        "java.."
+                )
+                .allowEmptyShould(true);
+
+        rule.check(classes);
+    }
+
+    @Test
+    void bid_request_builder_must_depend_only_on_bid_request_inventory_slot_request_auction_shared_and_jdk_packages() {
+        var classes = mainClasses();
+
+        ArchRule rule = classes()
+                .that().resideInAPackage("com.bbororo.rtb.ssp.bidrequest..")
+                .should().onlyDependOnClassesThat()
+                .resideInAnyPackage(
+                        "com.bbororo.rtb.ssp.bidrequest..",
+                        "com.bbororo.rtb.ssp.inventory..",
+                        "com.bbororo.rtb.ssp.slotrequest..",
+                        "com.bbororo.rtb.ssp.auctionflow..",
+                        "com.bbororo.rtb.shared..",
+                        "java.."
+                )
+                .allowEmptyShould(true);
+
+        rule.check(classes);
+    }
+
+    @Test
+    void slot_request_handler_must_depend_only_on_slot_request_bid_request_inventory_auction_shared_and_jdk_packages() {
+        var classes = mainClasses();
+
+        ArchRule rule = classes()
+                .that().resideInAPackage("com.bbororo.rtb.ssp.slotrequest..")
+                .should().onlyDependOnClassesThat()
+                .resideInAnyPackage(
+                        "com.bbororo.rtb.ssp.slotrequest..",
+                        "com.bbororo.rtb.ssp.bidrequest..",
+                        "com.bbororo.rtb.ssp.inventory..",
+                        "com.bbororo.rtb.ssp.auctionflow..",
+                        "com.bbororo.rtb.shared..",
+                        "java.."
+                )
+                .allowEmptyShould(true);
+
+        rule.check(classes);
+    }
+
+    @Test
     void dsp_gateway_must_depend_only_on_dsp_gateway_shared_auction_and_jdk_packages() {
         var classes = mainClasses();
 

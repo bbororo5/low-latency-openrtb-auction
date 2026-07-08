@@ -12,6 +12,7 @@ import java.util.concurrent.Executors;
 public final class JdkSspHttpServer {
 
     public static final String AUCTION_PATH = "/openrtb/auction";
+    public static final String PUBLISHER_AUCTION_PATH = "/publisher/auction";
     public static final String OK_PATH = "/ok";
     public static final String JSON_BASELINE_PATH = "/baseline/openrtb-json";
 

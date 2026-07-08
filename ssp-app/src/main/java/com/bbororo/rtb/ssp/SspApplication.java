@@ -6,13 +6,17 @@ import com.bbororo.rtb.shared.observability.RtbMetrics;
 import com.bbororo.rtb.shared.observability.RuntimeMetrics;
 import com.bbororo.rtb.shared.openrtb.codec.JacksonOpenRtbJsonCodec;
 import com.bbororo.rtb.shared.openrtb.codec.OpenRtbJsonCodec;
+import com.bbororo.rtb.shared.common.MediaType;
 import com.bbororo.rtb.ssp.adapter.web.JdkSspHttpServer;
 import com.bbororo.rtb.ssp.adapter.web.OkHttpHandler;
 import com.bbororo.rtb.ssp.adapter.web.OpenRtbAuctionHttpHandler;
 import com.bbororo.rtb.ssp.adapter.web.OpenRtbJsonBaselineHttpHandler;
+import com.bbororo.rtb.ssp.adapter.web.ProviderSlotAuctionHttpHandler;
 import com.bbororo.rtb.ssp.auctionflow.AuctionFlow;
 import com.bbororo.rtb.ssp.auctionflow.DefaultAuctionDeadlinePolicy;
 import com.bbororo.rtb.ssp.auctionflow.DefaultAuctionFlow;
+import com.bbororo.rtb.ssp.bidrequest.OpenRtbBidRequestFactory;
+import com.bbororo.rtb.ssp.bidrequest.UuidRequestIdGenerator;
 import com.bbororo.rtb.ssp.bidjudge.DefaultBidJudge;
 import com.bbororo.rtb.ssp.dspgateway.DspEndpoint;
 import com.bbororo.rtb.ssp.dspgateway.DspHttpExecutor;
@@ -21,11 +25,17 @@ import com.bbororo.rtb.ssp.dspgateway.DspHttpResultMapper;
 import com.bbororo.rtb.ssp.dspgateway.HttpDspGateway;
 import com.bbororo.rtb.ssp.dspgateway.JdkHttpDspClient;
 import com.bbororo.rtb.ssp.dspgateway.StaticDspEndpointRegistry;
+import com.bbororo.rtb.ssp.inventory.BannerInventorySpec;
+import com.bbororo.rtb.ssp.inventory.InMemoryInventoryCatalog;
+import com.bbororo.rtb.ssp.inventory.InventoryPlacement;
+import com.bbororo.rtb.ssp.inventory.VideoInventorySpec;
 import com.bbororo.rtb.ssp.requesthandler.DefaultRequestHandler;
+import com.bbororo.rtb.ssp.slotrequest.DefaultSlotRequestHandler;
 import com.bbororo.rtb.ssp.winnerselector.FirstPriceWinnerSelector;
 import io.micrometer.prometheusmetrics.PrometheusConfig;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 
+import java.math.BigDecimal;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
@@ -58,10 +68,18 @@ public final class SspApplication {
                 new OpenRtbAuctionHttpHandler(codec, new DefaultRequestHandler(), auctionFlow, metrics),
                 new PrometheusMetricsHttpHandler(registry),
                 Map.of(
+                        JdkSspHttpServer.PUBLISHER_AUCTION_PATH, providerSlotHandler(auctionFlow, metrics),
                         JdkSspHttpServer.OK_PATH, new OkHttpHandler(),
                         JdkSspHttpServer.JSON_BASELINE_PATH, new OpenRtbJsonBaselineHttpHandler(codec)
                 )
         );
+    }
+
+    private static ProviderSlotAuctionHttpHandler providerSlotHandler(AuctionFlow auctionFlow, RtbMetrics metrics) {
+        var inventoryCatalog = new InMemoryInventoryCatalog(defaultInventoryPlacements());
+        var bidRequestFactory = new OpenRtbBidRequestFactory(new UuidRequestIdGenerator());
+        var slotRequestHandler = new DefaultSlotRequestHandler(inventoryCatalog, bidRequestFactory);
+        return new ProviderSlotAuctionHttpHandler(slotRequestHandler, auctionFlow, metrics);
     }
 
     private static AuctionFlow auctionFlow(
@@ -124,5 +142,37 @@ public final class SspApplication {
 
     private static DspEndpoint endpoint(String dspId, int port) {
         return new DspEndpoint(dspId, URI.create("http://localhost:" + port + "/openrtb/bid"));
+    }
+
+    private static List<InventoryPlacement> defaultInventoryPlacements() {
+        return List.of(
+                new InventoryPlacement(
+                        "publisher-demo",
+                        "home-top-banner",
+                        true,
+                        MediaType.BANNER,
+                        new BannerInventorySpec(300, 250),
+                        new BigDecimal("0.50"),
+                        "USD",
+                        120
+                ),
+                new InventoryPlacement(
+                        "publisher-demo",
+                        "pre-roll-video",
+                        true,
+                        MediaType.VIDEO,
+                        new VideoInventorySpec(
+                                640,
+                                360,
+                                List.of("video/mp4"),
+                                5,
+                                30,
+                                List.of(2, 3, 5)
+                        ),
+                        new BigDecimal("0.50"),
+                        "USD",
+                        120
+                )
+        );
     }
 }

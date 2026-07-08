@@ -37,6 +37,13 @@ public final class DefaultRequestHandler implements RequestHandler {
         if (hasMultipleMediaObjects(impression)) {
             return reject(RequestRejectionReason.INVALID_REQUEST, "Only one impression media object is allowed.");
         }
+        if (!DEFAULT_CURRENCY.equals(currencyOrDefault(impression))) {
+            return reject(RequestRejectionReason.UNSUPPORTED_REQUEST, "Only USD currency is supported.");
+        }
+        RequestHandlingResult mediaValidation = validateMediaSpec(impression, mediaType);
+        if (mediaValidation instanceof RejectedAuctionRequest) {
+            return mediaValidation;
+        }
 
         var auctionRequest = new AuctionRequest(
                 bidRequest.id(),
@@ -80,6 +87,38 @@ public final class DefaultRequestHandler implements RequestHandler {
             count++;
         }
         return count > 1;
+    }
+
+    private static RequestHandlingResult validateMediaSpec(Imp impression, MediaType mediaType) {
+        return switch (mediaType) {
+            case BANNER -> {
+                if (impression.banner().w() == null || impression.banner().h() == null
+                        || impression.banner().w() <= 0 || impression.banner().h() <= 0) {
+                    yield reject(RequestRejectionReason.INVALID_REQUEST, "Banner width and height are required.");
+                }
+                yield null;
+            }
+            case VIDEO -> {
+                if (impression.video().mimes() == null || impression.video().mimes().isEmpty()
+                        || impression.video().minduration() == null
+                        || impression.video().maxduration() == null
+                        || impression.video().protocols() == null
+                        || impression.video().protocols().isEmpty()) {
+                    yield reject(RequestRejectionReason.INVALID_REQUEST, "Video mimes, duration, and protocols are required.");
+                }
+                if (impression.video().minduration() <= 0
+                        || impression.video().maxduration() < impression.video().minduration()) {
+                    yield reject(RequestRejectionReason.INVALID_REQUEST, "Video duration range is invalid.");
+                }
+                yield null;
+            }
+            case NATIVE -> {
+                if (impression.nativeAd().request() == null || impression.nativeAd().request().isBlank()) {
+                    yield reject(RequestRejectionReason.INVALID_REQUEST, "Native request is required.");
+                }
+                yield null;
+            }
+        };
     }
 
     private static BigDecimal bidfloorOrZero(Imp impression) {
