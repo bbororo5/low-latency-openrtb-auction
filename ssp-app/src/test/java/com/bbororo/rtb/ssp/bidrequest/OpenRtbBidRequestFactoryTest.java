@@ -1,6 +1,7 @@
 package com.bbororo.rtb.ssp.bidrequest;
 
 import com.bbororo.rtb.shared.common.MediaType;
+import com.bbororo.rtb.shared.openrtb.Imp;
 import com.bbororo.rtb.ssp.auctionflow.AuctionCommand;
 import com.bbororo.rtb.ssp.inventory.BannerInventorySpec;
 import com.bbororo.rtb.ssp.inventory.InventoryPlacement;
@@ -13,6 +14,7 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 class OpenRtbBidRequestFactoryTest {
@@ -55,6 +57,7 @@ class OpenRtbBidRequestFactoryTest {
         assertEquals("USD", command.bidRequest().imp().getFirst().bidfloorcur());
         assertEquals(120, command.bidRequest().tmax());
         assertEquals(MediaType.BANNER, command.auctionRequest().mediaType());
+        assertAuctionCommandInvariants(command, MediaType.BANNER);
     }
 
     @Test
@@ -92,5 +95,31 @@ class OpenRtbBidRequestFactoryTest {
         assertEquals(List.of(2), command.bidRequest().imp().getFirst().video().protocols());
         assertEquals(90, command.bidRequest().tmax());
         assertEquals(MediaType.VIDEO, command.auctionRequest().mediaType());
+        assertAuctionCommandInvariants(command, MediaType.VIDEO);
+    }
+
+    private static void assertAuctionCommandInvariants(AuctionCommand command, MediaType expectedMediaType) {
+        assertEquals(command.bidRequest().id(), command.auctionRequest().requestId());
+        assertEquals(1, command.bidRequest().imp().size());
+
+        Imp impression = command.bidRequest().imp().getFirst();
+        assertEquals(impression.id(), command.auctionRequest().impId());
+        assertEquals(impression.bidfloor(), command.auctionRequest().bidfloor());
+        assertEquals(impression.bidfloorcur(), command.auctionRequest().bidfloorcur());
+        assertEquals(expectedMediaType, command.auctionRequest().mediaType());
+
+        switch (expectedMediaType) {
+            case BANNER -> {
+                assertNotNull(impression.banner());
+                assertNull(impression.video());
+                assertNull(impression.nativeAd());
+            }
+            case VIDEO -> {
+                assertNull(impression.banner());
+                assertNotNull(impression.video());
+                assertNull(impression.nativeAd());
+            }
+            case NATIVE -> throw new AssertionError("Provider-facing native request is out of scope.");
+        }
     }
 }

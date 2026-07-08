@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 
 public final class DefaultSlotRequestHandler implements SlotRequestHandler {
 
@@ -27,20 +28,20 @@ public final class DefaultSlotRequestHandler implements SlotRequestHandler {
     @Override
     public SlotRequestHandlingResult handle(ProviderSlotRequest request, Instant receivedAt) {
         if (request == null || isBlank(request.providerId()) || isBlank(request.placementId())) {
-            return reject(SlotRequestRejectionReason.INVALID_REQUEST, "providerId and placementId are required.");
+            return rejected(SlotRequestRejectionReason.INVALID_REQUEST, "providerId and placementId are required.");
         }
         if (request.tmax() != null && request.tmax() <= 0) {
-            return reject(SlotRequestRejectionReason.INVALID_REQUEST, "tmax must be positive.");
+            return rejected(SlotRequestRejectionReason.INVALID_REQUEST, "tmax must be positive.");
         }
 
         MediaType requestedMediaType = mediaType(request.mediaType());
         if (requestedMediaType == null) {
-            return reject(SlotRequestRejectionReason.UNSUPPORTED_REQUEST, "Only banner and video slot requests are supported.");
+            return rejected(SlotRequestRejectionReason.UNSUPPORTED_REQUEST, "Only banner and video slot requests are supported.");
         }
 
         return inventoryCatalog.find(request.providerId(), request.placementId())
                 .<SlotRequestHandlingResult>map(placement -> handleWithPlacement(request, requestedMediaType, placement, receivedAt))
-                .orElseGet(() -> reject(SlotRequestRejectionReason.UNSUPPORTED_REQUEST, "Unknown placement."));
+                .orElseGet(() -> rejected(SlotRequestRejectionReason.UNSUPPORTED_REQUEST, "Unknown placement."));
     }
 
     private SlotRequestHandlingResult handleWithPlacement(
@@ -50,68 +51,68 @@ public final class DefaultSlotRequestHandler implements SlotRequestHandler {
             Instant receivedAt
     ) {
         if (!placement.enabled()) {
-            return reject(SlotRequestRejectionReason.UNSUPPORTED_REQUEST, "Placement is disabled.");
+            return rejected(SlotRequestRejectionReason.UNSUPPORTED_REQUEST, "Placement is disabled.");
         }
         if (!USD.equals(placement.currency())) {
-            return reject(SlotRequestRejectionReason.UNSUPPORTED_REQUEST, "Only USD inventory is supported.");
+            return rejected(SlotRequestRejectionReason.UNSUPPORTED_REQUEST, "Only USD inventory is supported.");
         }
         if (placement.mediaType() != requestedMediaType) {
-            return reject(SlotRequestRejectionReason.UNSUPPORTED_REQUEST, "Slot media type does not match placement.");
+            return rejected(SlotRequestRejectionReason.UNSUPPORTED_REQUEST, "Slot media type does not match placement.");
         }
 
-        SlotRequestHandlingResult validation = validateMediaSpec(request, placement);
-        if (validation instanceof RejectedSlotRequest) {
-            return validation;
+        Optional<RejectedSlotRequest> validationFailure = validateMediaSpec(request, placement);
+        if (validationFailure.isPresent()) {
+            return validationFailure.get();
         }
 
         return new AcceptedSlotRequest(bidRequestFactory.build(request, placement, receivedAt));
     }
 
-    private static SlotRequestHandlingResult validateMediaSpec(ProviderSlotRequest request, InventoryPlacement placement) {
+    private static Optional<RejectedSlotRequest> validateMediaSpec(ProviderSlotRequest request, InventoryPlacement placement) {
         return switch (placement.mediaType()) {
             case BANNER -> validateBanner(request, (BannerInventorySpec) placement.mediaSpec());
             case VIDEO -> validateVideo(request, (VideoInventorySpec) placement.mediaSpec());
-            case NATIVE -> reject(SlotRequestRejectionReason.UNSUPPORTED_REQUEST, "Native slot requests are out of scope.");
+            case NATIVE -> validationFailure(SlotRequestRejectionReason.UNSUPPORTED_REQUEST, "Native slot requests are out of scope.");
         };
     }
 
-    private static SlotRequestHandlingResult validateBanner(ProviderSlotRequest request, BannerInventorySpec spec) {
+    private static Optional<RejectedSlotRequest> validateBanner(ProviderSlotRequest request, BannerInventorySpec spec) {
         if (request.width() == null || request.height() == null) {
-            return reject(SlotRequestRejectionReason.INVALID_REQUEST, "Banner width and height are required.");
+            return validationFailure(SlotRequestRejectionReason.INVALID_REQUEST, "Banner width and height are required.");
         }
         if (request.width() <= 0 || request.height() <= 0) {
-            return reject(SlotRequestRejectionReason.INVALID_REQUEST, "Banner width and height must be positive.");
+            return validationFailure(SlotRequestRejectionReason.INVALID_REQUEST, "Banner width and height must be positive.");
         }
         if (request.width() != spec.width() || request.height() != spec.height()) {
-            return reject(SlotRequestRejectionReason.UNSUPPORTED_REQUEST, "Banner size is not supported by placement.");
+            return validationFailure(SlotRequestRejectionReason.UNSUPPORTED_REQUEST, "Banner size is not supported by placement.");
         }
-        return null;
+        return Optional.empty();
     }
 
-    private static SlotRequestHandlingResult validateVideo(ProviderSlotRequest request, VideoInventorySpec spec) {
+    private static Optional<RejectedSlotRequest> validateVideo(ProviderSlotRequest request, VideoInventorySpec spec) {
         if (request.mimes() == null || request.mimes().isEmpty()
                 || request.minDuration() == null
                 || request.maxDuration() == null
                 || request.protocols() == null
                 || request.protocols().isEmpty()) {
-            return reject(SlotRequestRejectionReason.INVALID_REQUEST, "Video mimes, duration, and protocols are required.");
+            return validationFailure(SlotRequestRejectionReason.INVALID_REQUEST, "Video mimes, duration, and protocols are required.");
         }
         if (request.minDuration() <= 0 || request.maxDuration() < request.minDuration()) {
-            return reject(SlotRequestRejectionReason.INVALID_REQUEST, "Video duration range is invalid.");
+            return validationFailure(SlotRequestRejectionReason.INVALID_REQUEST, "Video duration range is invalid.");
         }
         if (request.width() != null && request.width() <= 0 || request.height() != null && request.height() <= 0) {
-            return reject(SlotRequestRejectionReason.INVALID_REQUEST, "Video width and height must be positive when provided.");
+            return validationFailure(SlotRequestRejectionReason.INVALID_REQUEST, "Video width and height must be positive when provided.");
         }
         if (!overlaps(spec.mimes(), request.mimes())) {
-            return reject(SlotRequestRejectionReason.UNSUPPORTED_REQUEST, "Video MIME type is not supported by placement.");
+            return validationFailure(SlotRequestRejectionReason.UNSUPPORTED_REQUEST, "Video MIME type is not supported by placement.");
         }
         if (request.minDuration() < spec.minDuration() || request.maxDuration() > spec.maxDuration()) {
-            return reject(SlotRequestRejectionReason.UNSUPPORTED_REQUEST, "Video duration is not supported by placement.");
+            return validationFailure(SlotRequestRejectionReason.UNSUPPORTED_REQUEST, "Video duration is not supported by placement.");
         }
         if (!overlaps(spec.protocols(), request.protocols())) {
-            return reject(SlotRequestRejectionReason.UNSUPPORTED_REQUEST, "Video protocol is not supported by placement.");
+            return validationFailure(SlotRequestRejectionReason.UNSUPPORTED_REQUEST, "Video protocol is not supported by placement.");
         }
-        return null;
+        return Optional.empty();
     }
 
     private static MediaType mediaType(String value) {
@@ -130,7 +131,11 @@ public final class DefaultSlotRequestHandler implements SlotRequestHandler {
         return left != null && right != null && left.stream().anyMatch(right::contains);
     }
 
-    private static RejectedSlotRequest reject(SlotRequestRejectionReason reason, String message) {
+    private static Optional<RejectedSlotRequest> validationFailure(SlotRequestRejectionReason reason, String message) {
+        return Optional.of(new RejectedSlotRequest(reason, message));
+    }
+
+    private static RejectedSlotRequest rejected(SlotRequestRejectionReason reason, String message) {
         return new RejectedSlotRequest(reason, message);
     }
 
