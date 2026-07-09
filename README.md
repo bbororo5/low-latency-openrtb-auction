@@ -25,14 +25,6 @@ OpenRTB는 SSP와 DSP 사이에서 입찰 요청(`BidRequest`)과 입찰 응답(
 - 여러 경량 DSP에 같은 `BidRequest`를 전달하고 제한 시간 안에 응답을 수집합니다.
 - `no-bid`, `timeout`, `late bid`, `invalid bid`를 구분하고, 유효한 bid 중 winner 또는 no-winner를 결정합니다.
 
-## Out of Scope
-
-현재 범위는 경매 hot path 검증에 집중하며, 다음 영역은 다루지 않습니다.
-
-- 광고 렌더링, tracking, reporting 같은 광고 플랫폼 제품 기능
-- billing, settlement, ledger 같은 정산/원장 기능
-- 실제 외부 SSP/DSP 연동과 Kubernetes 운영 검증
-
 ## Planned Workflow
 
 이 프로젝트는 아래 순서로 진행합니다.
