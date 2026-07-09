@@ -1,88 +1,82 @@
 # Architecture Significant Requirements
 
-이 문서는 RTB hot path의 아키텍처를 결정하기 전에 반드시 확인해야 하는 요구사항과 제약사항을 정리한다.
+이 문서는 RTB 경매 실행 구조를 바꾸는 핵심 요구사항만 선별한다.
 
-ASR은 기능 목록이 아니다. 이 문서의 목적은 컴포넌트 경계, 데이터 경계, timeout 정책, 동시성 제어, 저장소 선택, 관측 방식이 충돌할 때 사용할 판단 기준을 세우는 것이다.
+ASR은 모든 기능 요구사항을 모아둔 목록이 아니다. 컴포넌트 분리, 데이터 분리, 동시 처리 방식, 저장소 사용 방식, 장애 처리, 성능 측정 방식에 영향을 주는 요구사항만 다룬다.
 
-## 1. Problem Context
+## 1. Context and Scope
 
-이 프로젝트는 광고 슬롯 요청이 들어왔을 때 SSP가 여러 DSP에 입찰 요청을 보내고, 제한 시간 안에 도착한 유효 응답만으로 winner 또는 no-winner를 결정하는 RTB hot path를 다룬다.
+이 프로젝트는 광고 슬롯 요청이 들어왔을 때 SSP가 여러 DSP에 입찰을 요청하고, 제한 시간 안에 도착한 유효한 응답만으로 winner 또는 no-winner를 결정하는 경매 실행 경로를 다룬다.
 
-이 문제는 단순히 가장 높은 가격을 고르는 문제가 아니다.
+현재 ASR은 다음 범위에 집중한다.
 
-- 늦게 도착한 bid는 높은 가격이어도 winner 후보가 될 수 없다.
-- invalid bid, no-bid, timeout은 winner 후보가 될 수 없다.
-- 일부 DSP 실패가 전체 경매 실패로 전파되면 안 된다.
-- 입찰 가격과 실제 돈의 차감/원장 기록은 같은 책임이 아니다.
-- 평균 latency만으로 deadline 위반과 tail latency를 설명할 수 없다.
+- provider 요청을 경매에 사용할 수 있는 요청으로 바꾼다.
+- 여러 DSP 응답을 제한 시간 안에서 모은다.
+- 유효한 bid만 winner 후보로 인정한다.
+- winner 또는 정상 no-winner를 결정한다.
+- latency, timeout, 결과 분포를 측정할 수 있게 한다.
 
-따라서 이 시스템의 아키텍처는 결과 정확성, 돈 데이터 경계, deadline, tail latency, 동시성, 부분 실패, 중복 처리, 시간 기준, 관측 가능성을 함께 고려해야 한다.
+광고 렌더링, 사용자 추적, 리포팅, 실제 정산/원장 구현, 운영 배포 전략은 이 문서에서 다루지 않는다.
 
-## 2. Adopted Architecture Characteristics
+## 2. Architecture Drivers
 
-아래 특성은 현재 프로젝트의 아키텍처를 실제로 제약한다. 이 문서는 1부터 10까지의 정밀한 순위를 주장하지 않는다. 대신 후속 설계에서 방어 가능한 의사결정을 위해 세 개의 decision group으로 나눈다.
+이 프로젝트의 아키텍처를 움직이는 핵심 관심사는 세 가지다.
 
-| Decision group | Characteristic | Meaning |
-|---|---|---|
-| Correctness constraints | Result correctness | valid bid만 winner 후보가 된다. |
-| Correctness constraints | Monetary boundary | bid price, budget, balance, charge, ledger를 같은 데이터로 취급하지 않는다. |
-| Correctness constraints | Idempotency boundary | 요청 재시도나 win event 중복이 중복 경매/중복 과금으로 이어지지 않아야 한다. |
-| Correctness constraints | Time consistency | deadline, timeout, late bid 판정은 일관된 시간 기준을 사용해야 한다. |
-| Correctness constraints | Deterministic decision | 같은 valid bid 후보 집합에서는 같은 winner가 나와야 한다. |
-| Performance constraints | Deadline compliance | 더 좋은 bid를 기다리는 것보다 제한 시간 안에 결정을 끝내는 것이 우선이다. |
-| Performance constraints | Tail latency control | 평균 latency보다 p95/p99와 deadline 위반을 더 중요하게 본다. |
-| Performance constraints | Throughput under concurrency | 고빈도 요청과 DSP fan-out에서 처리량과 포화 지점을 관찰할 수 있어야 한다. |
-| Failure handling and observability | Failure isolation | 일부 DSP timeout/error가 전체 경매 실패로 번지지 않아야 한다. |
-| Failure handling and observability | Observability | winner/no-winner와 latency 문제를 결과 분포와 지표로 설명할 수 있어야 한다. |
-
-`Security / privacy`, `Operability`, `Evolvability`는 중요하지만 현재 hot path 아키텍처의 1차 결정 요인은 아니다. 후속 API, runtime, operations 문서에서 필요한 수준으로 다룬다.
-
-decision group 간 판단 기준은 다음과 같다.
-
-- `Correctness constraints`는 깨지면 시스템이 빠르게 동작해도 경매 의미가 틀어진다.
-- `Performance constraints`는 이 프로젝트의 핵심 동기이며, correctness를 깨지 않는 범위에서 우선 최적화한다.
-- `Failure handling and observability`는 부분 실패를 견디고 결과를 설명하기 위한 조건이다.
-
-## 3. Core Invariants
-
-아래 불변조건은 구현 방식이 바뀌어도 유지되어야 한다.
-
-| Invariant | Reason |
+| Driver | 쉽게 말하면 |
 |---|---|
-| 경매를 시작할 수 없는 provider 요청은 DSP 호출까지 가지 않는다. | 불필요한 fan-out과 모호한 실패를 막는다. |
-| 하나의 경매 실행은 하나의 deadline을 기준으로 판단된다. | DSP별 응답을 같은 시간 기준으로 비교한다. |
-| DSP 응답은 검증 전까지 winner 후보가 아니다. | 외부 관찰값과 내부 판단 대상을 분리한다. |
-| winner는 valid bid 후보에서만 결정된다. | late bid, invalid bid, no-bid, timeout이 결과를 오염시키지 않는다. |
-| valid bid가 없으면 no-winner가 된다. | 정상 비낙찰과 시스템 장애를 구분한다. |
-| bid price는 낙찰 판단의 입력이지 잔고 차감의 원장이 아니다. | auction result와 monetary ledger의 책임을 분리한다. |
-| 같은 낙찰 사실은 돈 관점에서 한 번만 반영되어야 한다. | 향후 과금/정산 처리에서 중복 차감을 막는다. |
-| 같은 valid bid 후보 집합과 같은 tie-break 기준은 같은 winner를 만든다. | 결과 재현성과 테스트 가능성을 보장한다. |
-| 관측 데이터는 경매 결과나 과금 사실의 원본이 아니다. | metrics/logs/traces 누락이나 샘플링이 비즈니스 사실을 바꾸면 안 된다. |
+| Correct auction decision | 빠르게 응답하더라도 경매 규칙에 맞지 않는 bid가 winner가 되면 안 된다. |
+| Low-latency concurrent execution | 여러 DSP를 동시에 호출하더라도 제한 시간 안에 결과를 내야 한다. |
+| Failure handling and result explanation | 일부 DSP가 실패해도 전체 경매를 실패로 만들지 않고, 왜 winner 또는 no-winner가 나왔는지 설명할 수 있어야 한다. |
 
-## 4. Tradeoff Direction
+이 세 가지는 후속 설계의 판단 기준이다. 특히 유효하지 않은 bid를 winner로 만드는 성능 최적화는 선택하지 않는다.
 
-이 프로젝트는 아래 방향으로 손실을 선택한다.
+## 3. Key Requirements
 
-| Tradeoff | Direction |
+아래 요구사항은 시스템 구조를 실제로 바꾸기 때문에 ASR로 남긴다.
+
+| Requirement | 왜 구조가 달라지는가 |
 |---|---|
-| Bid opportunity vs deadline | 더 많은 bid를 기다리지 않고 deadline을 지킨다. |
-| Auction speed vs monetary consistency | winner decision은 빠르게 끝내되, 돈의 진실원은 별도 책임으로 둔다. |
-| Throughput vs resource safety | 무제한 fan-out보다 in-flight 작업과 외부 호출 비용을 관찰하고 제한할 수 있게 한다. |
-| Simplicity vs correctness | 단순 성공/실패 모델 대신 no-bid, timeout, late bid, invalid bid, no-winner를 구분한다. |
-| Observability vs hot path cost | 관측은 필수지만, 경매 결과를 바꾸지 않는 보조 데이터로 둔다. |
-| Freshness vs latency | source store 동기 조회를 hot path 기본값으로 두지 않는다. |
+| 경매는 제한 시간 안에 winner 또는 no-winner를 결정해야 한다. | DSP 응답을 무기한 기다릴 수 없고, 늦게 도착한 bid를 따로 분류해야 한다. |
+| winner는 유효한 bid 후보에서만 결정되어야 한다. | DSP 응답을 받은 단계, bid를 검증하는 단계, winner를 고르는 단계를 분리해야 한다. |
+| bid price는 실제 잔고 차감이나 원장 기록의 기준 데이터가 아니다. | 경매 결과, 낙찰 사실, 원장 기록을 서로 다른 데이터로 다뤄야 한다. |
+| 일부 DSP timeout/error는 전체 경매 실패가 되면 안 된다. | DSP별 결과를 따로 모으고, 각 결과를 timeout, error, no-bid, valid bid 등으로 분류해야 한다. |
+| 성능은 평균 latency만으로 판단하지 않는다. | p95/p99 latency, deadline 준수율, timeout 비율을 측정할 수 있어야 한다. |
+| 중복 요청이나 중복 낙찰 사실은 안전하게 구분되어야 한다. | request, auction, win event가 같은 뜻으로 섞이면 안 된다. |
+| 같은 입력과 같은 후보 집합은 같은 winner를 만들어야 한다. | 같은 상황에서 결과가 매번 달라지지 않도록 tie-break 규칙이 필요하다. |
 
-## 5. Architecture Implications
+## 4. Constraints and Invariants
 
-이 ASR은 후속 설계에 다음 압력을 준다.
+아래 조건은 구현 방식이 달라져도 지켜야 한다.
 
-| Area | Implication |
+| Rule | 쉽게 말하면 |
 |---|---|
-| Component boundary | slot input, bid request creation, DSP fan-out, bid judgment, winner decision 책임을 분리한다. |
-| Data boundary | DSP response observation, valid bid candidate, auction result, win fact, ledger entry를 구분한다. |
-| Monetary model | bid price와 실제 잔고 차감/원장 기록은 같은 데이터로 취급하지 않는다. |
-| Identity model | request identity, auction identity, win event identity의 의미를 구분해야 한다. |
-| Time model | deadline과 late bid 판정에 쓰는 시간 기준을 정의해야 한다. |
-| Resource model | 동시 요청, DSP 수, connection, thread, serialization 비용을 측정하고 제한할 수 있어야 한다. |
-| API contract | no-bid, timeout, late bid, invalid bid, no-winner의 의미가 경계에서 흔들리면 안 된다. |
-| Verification | 평균 latency만 보지 않고 p95/p99, deadline compliance, timeout rate, result distribution을 본다. |
+| DSP 응답은 검증 전까지 외부에서 온 응답일 뿐이다. | 응답을 받았다는 사실과 winner 후보가 된다는 사실은 다르다. |
+| 제한 시간 이후 도착한 bid는 winner 후보가 아니다. | 높은 가격보다 시간 제한이 우선한다. |
+| invalid bid, no-bid, timeout은 winner 후보가 아니다. | 후보가 아닌 결과가 winner 결정에 섞이면 안 된다. |
+| 유효한 bid가 없으면 정상 no-winner다. | 비낙찰과 시스템 장애를 구분한다. |
+| 경매 결과는 잔고 차감의 기준 데이터가 아니다. | auction result나 metrics를 돈 차감의 원본으로 사용하지 않는다. |
+| 관측 데이터는 비즈니스 사실의 원본이 아니다. | metrics, logs, traces가 누락되거나 샘플링되어도 경매 결과가 바뀌면 안 된다. |
+
+## 5. Quality Attribute Tradeoffs
+
+이 프로젝트는 품질속성이 충돌할 때 아래 방향을 선택한다.
+
+| Tradeoff | 선택 방향 |
+|---|---|
+| 더 많은 bid 기회 vs 제한 시간 준수 | 더 많은 bid를 기다리기보다 제한 시간을 지킨다. |
+| 빠른 낙찰 판단 vs 돈 데이터 정확성 | 낙찰 판단은 빠르게 끝내되, 실제 돈 데이터는 별도 책임으로 둔다. |
+| 높은 처리량 vs 자원 안정성 | 무제한으로 DSP를 호출하지 않고, 동시에 처리 중인 작업과 외부 호출 비용을 제한할 수 있게 한다. |
+| 단순한 성공/실패 모델 vs 결과 정확성 | 단순 성공/실패보다 no-bid, timeout, late bid, invalid bid, no-winner 구분을 우선한다. |
+| 자세한 관측 vs hot path 비용 | 관측은 필요하지만, 경매 결과를 바꾸지 않는 보조 데이터로 둔다. |
+
+## 6. Design and Verification Implications
+
+후속 설계와 검증은 아래 기준을 만족해야 한다.
+
+| Area | 후속 설계 기준 |
+|---|---|
+| Component design | slot input, bid request creation, DSP fan-out, bid validation, winner decision 책임을 분리한다. |
+| Data design | DSP 응답, 유효한 bid 후보, 경매 결과, 낙찰 사실, 원장 기록을 구분한다. |
+| Runtime design | deadline, timeout, 진행 중인 DSP 호출, connection/thread/resource 사용량을 측정하고 제한할 수 있어야 한다. |
+| API design | no-bid, timeout, late bid, invalid bid, no-winner 결과 분류가 SSP와 DSP 경계에서 일관되어야 한다. |
+| Verification | late bid 제외, 유효 후보 경계, 정상 no-winner, 부분 실패 격리, p95/p99 latency, deadline 준수를 확인한다. |
