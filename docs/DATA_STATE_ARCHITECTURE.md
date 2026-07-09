@@ -1,10 +1,10 @@
-# RTB Business Data Classification
+# RTB Data State Architecture
 
 ## 1. Purpose
 
-이 문서는 RTB 경매와 입찰에서 등장하는 비즈니스 데이터의 종류와 성질을 분류한다.
+이 문서는 RTB 경매와 입찰에서 등장하는 데이터의 정체를 분류하고, 어떤 데이터가 진실원(source of truth), 파생 상태(derived state), 일시 입력(transient input), 이벤트(event), 관측 데이터(observability data)인지 판단하기 위한 기준을 세운다.
 
-목적은 필드나 스키마를 먼저 정의하는 것이 아니라, 각 데이터가 어떤 비즈니스 의미를 가지며 어떤 저장/처리 특성을 요구하는지 판단하기 위한 기준을 세우는 것이다. 저장소 제품 선택, SSP/DSP store ownership, budget reservation, event output 논의는 이 분류를 바탕으로 별도 결정한다.
+목적은 필드나 스키마를 먼저 정의하는 것이 아니라, 각 데이터가 어떤 비즈니스 의미를 가지며 어떤 저장/처리 특성을 요구하는지 판단하기 위한 기준을 세우는 것이다. 저장소 제품 선택, SSP/DSP store ownership, budget reservation, event output, 장애 복구, 정합성 모델 논의는 이 분류를 바탕으로 별도 결정한다.
 
 이 문서는 현재 프로젝트의 구현 범위를 확장하지 않는다. 현재 구현은 Provider Slot Request를 받아 SSP가 OpenRTB BidRequest를 생성하고, BidResponse 수집과 낙찰 판단까지 이어지는 hot path에 집중한다. 과금, 정산, 리포팅, 광고 운영 백오피스는 여전히 범위 밖이다.
 
