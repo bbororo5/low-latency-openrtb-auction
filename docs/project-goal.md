@@ -24,7 +24,7 @@ RTB의 응답 제한 시간과 불완전한 입찰 응답이라는 제약을 이
 - SSP와 DSP 사이의 경계 객체는 OpenRTB의 표현 방식을 우선한다. 현재 기본 광고 범위는 `Imp.banner`, `Imp.video`이고, 커스텀 `mediaType` 필드 대신 OpenRTB media 객체의 존재로 광고 타입을 표현한다.
 - 시스템의 관심사는 입찰 요청 처리, 입찰 여부와 입찰가 판단, BidResponse 생성/수집, 낙찰자/낙찰가 결정까지이다.
 - 실제 광고 노출, 클릭, 과금, 리포팅은 제외한다.
-- 상세 컴포넌트 구조와 기술 선택은 Tech Spec 단계에서 결정한다.
+- 상세 컴포넌트 구조와 기술 선택은 Implementation Technical Specification 단계에서 결정한다.
 - 최적화 방식은 기준 구현과 측정 이후 결정한다.
 
 ## 4. 기술적 초점
@@ -41,15 +41,18 @@ RTB의 응답 제한 시간과 불완전한 입찰 응답이라는 제약을 이
 프로젝트는 아래 순서로 진행한다.
 
 1. Project Goal
-2. PRD
-3. Architecture
-4. Tech Spec
-5. ADR
-6. Feature Development
-7. Test & Validation
-8. Performance Measurement
-9. Optimization
-10. Retrospective
+2. Product Requirements
+3. Architecture Significant Requirements
+4. Architecture Description
+5. API / Interface Specification
+6. Data Architecture
+7. Implementation Technical Specification
+8. Architecture Decision Records
+9. Feature Development
+10. Test & Validation
+11. Performance Measurement
+12. Optimization
+13. Retrospective
 
 각 단계에서는 현재 단계에 필요한 결정만 내린다. 이후 단계의 결정을 앞당겨 확정하지 않는다.
 

@@ -82,7 +82,7 @@ Current single-VM JSON baseline result:
 
 Detailed record:
 
-- [AWS Single VM JSON Baseline - 2026-07-08](performance/2026-07-08-aws-single-vm-json-baseline.md)
+- [AWS Single VM JSON Baseline - 2026-07-08](performance-reports/2026-07-08-aws-single-vm-json-baseline.md)
 
 ## 4. Initial Load Baseline
 
@@ -113,7 +113,7 @@ Prometheus metrics showed that SSP internal auction duration stayed around `132m
 
 Detailed investigation note:
 
-- [Local Compose Load Investigation - 2026-07-06](performance/2026-07-06-local-compose-load-investigation.md)
+- [Local Compose Load Investigation - 2026-07-06](performance-reports/2026-07-06-local-compose-load-investigation.md)
 
 This means the next performance work should not jump directly to higher RPS or local HTTP server tuning. The next step is to separate the target system from the load generator and rerun the same scenario.
 
@@ -239,8 +239,8 @@ Prometheus 기준 SSP 내부 경매 시간은 다음과 같다.
 
 상세 조사 기록:
 
-- [AWS HttpServer Executor Investigation - 2026-07-06](performance/2026-07-06-aws-httpserver-executor-investigation.md)
-- [Load Generator Path Investigation - 2026-07-06](performance/2026-07-06-load-generator-path-investigation.md)
+- [AWS HttpServer Executor Investigation - 2026-07-06](performance-reports/2026-07-06-aws-httpserver-executor-investigation.md)
+- [Load Generator Path Investigation - 2026-07-06](performance-reports/2026-07-06-load-generator-path-investigation.md)
 
 ## 7. Next Measurement Steps
 
@@ -300,7 +300,7 @@ timeout 없는 capacity scenario에서는 165 RPS까지 경고 없이 실행되�
 
 상세 기록:
 
-- [Capacity Scenario Stress - 2026-07-06](performance/2026-07-06-capacity-scenario-stress.md)
+- [Capacity Scenario Stress - 2026-07-06](performance-reports/2026-07-06-capacity-scenario-stress.md)
 
 ## 9. Cloud Measurement Path
 
@@ -352,7 +352,7 @@ All five jobs are `up=1`:
 
 Detailed note:
 
-- [Grafana Cloud k6 Baseline - 2026-07-06](performance/2026-07-06-grafana-cloud-k6-baseline.md)
+- [Grafana Cloud k6 Baseline - 2026-07-06](performance-reports/2026-07-06-grafana-cloud-k6-baseline.md)
 
 Cloud k6 run pages remain useful for remote smoke checks and external-path observations.
 They are not used as the primary source for high-RPS capacity claims.
@@ -414,4 +414,4 @@ expected winner = dsp-b
 
 상세 기록:
 
-- [AWS Load Generator Capacity - 2026-07-07](performance/2026-07-07-aws-loadgen-capacity.md)
+- [AWS Load Generator Capacity - 2026-07-07](performance-reports/2026-07-07-aws-loadgen-capacity.md)

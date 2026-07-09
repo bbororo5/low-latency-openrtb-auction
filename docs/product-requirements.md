@@ -1,4 +1,4 @@
-# PRD: OpenRTB 기반 저지연 RTB 입찰 시스템
+# Product Requirements: OpenRTB 기반 저지연 RTB 입찰 시스템
 
 ## 1. Overview
 
@@ -8,7 +8,7 @@
 
 실제 광고 렌더링, 노출/클릭 추적, 과금, 리포팅, 광고 운영 백오피스는 포함하지 않는다.
 
-이 문서는 시스템이 해결해야 할 문제, 기능 요구사항, 실패 케이스, 성능 측정 기준을 정의한다. 기술 스택, 세부 아키텍처, 배포 방식, 최적화 구현은 Tech Spec과 ADR에서 다룬다.
+이 문서는 시스템이 해결해야 할 문제, 기능 요구사항, 실패 케이스, 성능 측정 기준을 정의한다. 기술 스택, 세부 아키텍처, 배포 방식, 최적화 구현은 Implementation Technical Specification과 Architecture Decision Records에서 다룬다.
 
 ## 2. Problem Statement
 
@@ -151,7 +151,7 @@ Provider Slot Client가 SSP에 보내는 프로젝트 입력이다. provider id,
 
 `Auction Price`
 
-경매 규칙에 따라 결정된 낙찰가다. 이 프로젝트는 Tech Spec에서 정의한 First Price Auction을 기본 경매 규칙으로 사용한다.
+경매 규칙에 따라 결정된 낙찰가다. 이 프로젝트는 Implementation Technical Specification에서 정의한 First Price Auction을 기본 경매 규칙으로 사용한다.
 
 `No-Winner`
 
@@ -249,7 +249,7 @@ Provider Slot Client가 SSP에 보내는 프로젝트 입력이다. provider id,
 - 경량 DSP 수가 증가함
 - 동시 요청 수가 증가함
 
-각 케이스의 구체적인 구현 방식은 Tech Spec에서 정의한다. PRD에서는 시스템이 어떤 결과를 내야 하는지만 정의한다.
+각 케이스의 구체적인 구현 방식은 Implementation Technical Specification에서 정의한다. Product Requirements에서는 시스템이 어떤 결과를 내야 하는지만 정의한다.
 
 ## 10. Performance and Measurement Requirements
 
@@ -305,7 +305,7 @@ Provider Slot Client가 SSP에 보내는 프로젝트 입력이다. provider id,
 
 ## 11. Assumptions
 
-PRD는 다음 가정을 둔다.
+Product Requirements는 다음 가정을 둔다.
 
 - OpenRTB 2.6 전체가 아니라 제한된 요청/응답 범위를 사용한다.
 - SSP-DSP 경계에서는 하나의 BidRequest가 하나의 광고 노출 기회를 가진다.
@@ -327,53 +327,65 @@ PRD는 다음 가정을 둔다.
 
 프로젝트 목표와 범위를 확정한다.
 
-`M2: PRD Finalization`
+`M2: Product Requirements Finalization`
 
 기능 요구사항, 실패 케이스, 성능 측정 기준을 확정한다.
 
-`M3: Architecture`
+`M3: Architecture Significant Requirements`
 
-시스템 경계, 품질 기준, 실행 흐름을 정의한다.
+품질속성, 기술 제약, 측정 가능한 시나리오를 정의한다.
 
-`M4: Tech Spec`
+`M4: Architecture Description`
+
+시스템 경계, 주요 view, 실행 흐름을 정의한다.
+
+`M5: API / Interface Specification`
+
+provider-facing API, SSP-DSP OpenRTB subset, 응답/실패 계약을 정의한다.
+
+`M6: Data Architecture`
+
+데이터 상태, source of truth, serving copy, 정합성 요구를 정의한다.
+
+`M7: Implementation Technical Specification`
 
 구현 구조, 기술 스택, API 계약, 테스트 전략을 결정한다.
 
-`M5: Contract and Test Fixture Setup`
+`M8: Contract and Test Fixture Setup`
 
 Provider Slot Request, OpenRTB 요청/응답 DTO, 지원 필드 검증 규칙, 예시 BidRequest, 예시 BidResponse, 테스트용 inventory와 캠페인 데이터를 준비한다.
 
-`M6: Lightweight DSP Flow`
+`M9: Lightweight DSP Flow`
 
 경량 DSP의 광고 타입별 요청 해석, 캠페인 매칭, bid/no-bid 결정, 입찰가 산정, BidResponse 생성을 구현한다.
 
-`M7: Lightweight SSP Auction Flow`
+`M10: Lightweight SSP Auction Flow`
 
 경량 SSP의 provider slot request 수신, inventory 조회, BidRequest 생성, 여러 경량 DSP 호출, 응답 수집, timeout 처리, 낙찰자와 낙찰가 결정을 구현한다.
 
-`M8: Failure Case Handling`
+`M11: Failure Case Handling`
 
 no-bid, timeout, invalid bid, late bid, no-winner 시나리오를 구현한다.
 
-`M9: Performance Measurement`
+`M12: Performance Measurement`
 
 로컬 통제 환경에서 응답 시간(latency), 제한 시간 내 응답률(deadline compliance), 관찰된 처리량(observed throughput)을 측정한다.
 
-`M10: ADR`
+`M13: Architecture Decision Records`
 
 구현과 성능 측정 중 실제 갈림길이 생긴 결정만 선택지, trade-off, 근거와 함께 기록한다.
 
-`M11: Optimization`
+`M14: Optimization`
 
 측정 결과를 바탕으로 병목을 개선한다.
 
-`M12: Retrospective`
+`M15: Retrospective`
 
 구현 결과, 성능 결과, 설계 trade-off, 배운 점을 정리한다.
 
 ## 13. Open Questions
 
-아직 PRD 단계에서 확정하지 않을 질문들이다.
+아직 Product Requirements 단계에서 확정하지 않을 질문들이다.
 
 - 현재 배너/단순 동영상 범위를 언제, 어떤 근거로 확장할 것인가?
 - direct OpenRTB 호환 경로를 장기적으로 유지할 것인가, benchmark path로만 둘 것인가?

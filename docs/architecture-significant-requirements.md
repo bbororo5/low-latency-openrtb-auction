@@ -62,7 +62,7 @@
 | Risk | Current handling | Follow-up |
 |---|---|---|
 | Winner tie-break가 결정적이지 않으면 재현 테스트가 흔들릴 수 있다. | first-price winner rule을 사용한다. | 동일 가격 tie-break를 코드와 테스트로 고정한다. |
-| Empty `seatbid` no-bid 처리가 OpenRTB 구현 관행과 어긋날 수 있다. | HTTP 204 no-bid는 정상 처리한다. | empty `seatbid`를 no-bid로 볼지 API_SPEC/테스트에서 확정한다. |
+| Empty `seatbid` no-bid 처리가 OpenRTB 구현 관행과 어긋날 수 있다. | HTTP 204 no-bid는 정상 처리한다. | empty `seatbid`를 no-bid로 볼지 `api-interface-specification.md`와 테스트에서 확정한다. |
 | Malformed response를 gateway error로 볼지 invalid bid로 볼지 경계가 애매하다. | 현재는 구현 관찰값 기준으로 분류한다. | DSP Gateway와 Bid Judge의 책임 경계를 테스트로 고정한다. |
 | Serving copy freshness 정책이 없다. | source of truth와 serving copy를 분리한다. | stale 허용 범위와 refresh/cutover 정책을 별도 설계한다. |
 
