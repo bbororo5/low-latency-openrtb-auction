@@ -27,20 +27,11 @@ OpenRTB는 SSP와 DSP 사이에서 입찰 요청(`BidRequest`)과 입찰 응답(
 
 ## Out of Scope
 
-현재 프로젝트 범위에서는 아래 기능을 다루지 않습니다.
+현재 범위는 경매 hot path 검증에 집중하며, 다음 영역은 다루지 않습니다.
 
-- 실제 광고 렌더링
-- impression tracking
-- click tracking
-- conversion tracking
-- billing
-- reporting
-- 광고 운영 백오피스
-- 실제 외부 DSP/SSP 연동
-- DSP 라우팅 최적화
-- 전체 OpenRTB 2.6 스펙 구현
-- Kubernetes 기반 운영 검증
-- 클라우드/무료 배포 환경에서의 절대 성능 증명
+- 광고 렌더링, tracking, reporting 같은 광고 플랫폼 제품 기능
+- billing, settlement, ledger 같은 정산/원장 기능
+- 실제 외부 SSP/DSP 연동과 Kubernetes 운영 검증
 
 ## Planned Workflow
 
