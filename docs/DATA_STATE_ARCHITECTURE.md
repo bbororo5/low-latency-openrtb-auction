@@ -268,7 +268,46 @@ pacing, frequency cap, rate limit, DSP health, 최근 win rate 같은 real-time 
 | Process restarted | rebuild serving copy from source | derived serving state must be reconstructable. |
 | Source data changed | refresh policy applies | freshness and cutover policy are future decisions. |
 
-## 9. Research Boundary
+## 9. Consistency Requirements
+
+이 장은 저장소 제품을 고르기 전, 데이터별로 필요한 정합성 수준을 정리한다. 여기서 말하는 정합성은 "항상 같은 DB를 써야 한다"는 뜻이 아니라, 어떤 불일치를 허용할 수 있고 어떤 불일치는 시스템 의미를 깨뜨리는지를 구분하는 기준이다.
+
+### 9.1 Consistency Classes
+
+| Class | Meaning | Suitable data |
+|---|---|---|
+| Strong business consistency | 잘못되면 돈, 권리, 감사 가능성이 깨지는 상태다. 중복 처리, 순서, 원자성, 복구가 중요하다. | Money state, ledger, billing, settlement |
+| Request-local consistency | 단일 경매 요청 안에서는 모순이 없어야 하지만, 요청이 끝나면 재사용하지 않는 상태다. | `AuctionCommand`, bid validation result, winner decision |
+| Rebuildable serving consistency | 원본과 잠깐 다를 수 있지만, 원본에서 다시 만들 수 있어야 한다. | SSP inventory catalog, DSP Campaign Snapshot/index |
+| Append-only fact consistency | 한번 발생한 비즈니스 사실을 나중에 수정하기보다 보정 이벤트로 설명한다. | win, impression, billing event 후보 |
+| Best-effort diagnostic consistency | 누락이나 지연이 있을 수 있으며, 비즈니스 진실원으로 쓰지 않는다. | metrics, logs, traces |
+
+### 9.2 Current Hot Path Requirements
+
+| Area | Requirement |
+|---|---|
+| Slot Ingress | 같은 `ProviderSlotRequest`에서 만든 `AuctionCommand`는 request id, impression id, media type, floor, currency가 서로 모순되면 안 된다. |
+| Auction Execution | deadline 안에서 관찰한 DSP 결과만 현재 경매의 판단 재료로 쓴다. deadline 이후 결과는 가격과 무관하게 후보가 아니다. |
+| Bid Judgment | `BidResponse`는 관찰값일 뿐이며, 원 요청과 맞는지 검증되기 전에는 winner candidate가 아니다. |
+| Winner Decision | 같은 valid candidate set과 같은 tie-break rule에 대해 같은 winner/no-winner 결과를 내야 한다. |
+| Serving State | inventory catalog와 campaign snapshot은 hot path에서 빠르게 읽히는 serving copy다. 준비되지 않았으면 추측하지 않고 거절하거나 해당 DSP를 제외한다. |
+| Observability | metric/log/trace 기록 실패가 경매 결과를 바꾸면 안 된다. |
+
+### 9.3 Deferred Consistency Questions
+
+다음 질문은 현재 구현 범위 밖이지만, 저장소 선택 전에 반드시 다시 다뤄야 한다.
+
+| Deferred question | Why it matters |
+|---|---|
+| inventory/campaign serving copy가 원본보다 얼마나 오래되어도 되는가? | stale data 허용 범위가 refresh 방식, 캐시 무효화, 장애 시 fallback을 결정한다. |
+| provider slot request retry에 idempotency key를 둘 것인가? | event output이나 money flow가 붙으면 같은 요청을 두 번 처리하는 비용이 커진다. |
+| win/impression/billing event를 어떤 identity로 deduplicate할 것인가? | append-only event는 중복 기록과 재처리 전략 없이는 원장과 리포팅을 오염시킨다. |
+| budget reservation을 bid 시점에 할 것인가, win 시점에 할 것인가? | latency, overspend risk, ledger model, 보상 트랜잭션 방식이 달라진다. |
+| SSP store와 DSP store의 업데이트 전파 지연을 어느 정도 허용할 것인가? | 서로 다른 store 인스턴스를 전제로 할 때 cross-component consistency 기대치를 정해야 한다. |
+
+현재 단계의 결론은 이렇다. hot path 내부는 request-local consistency가 필요하고, inventory/campaign serving state는 rebuildable serving consistency가 필요하다. money/ledger는 strong business consistency가 필요하지만 아직 구현하지 않는다. observability는 best-effort diagnostic consistency로만 본다.
+
+## 10. Research Boundary
 
 저장소 기술 리서치는 다음 질문으로 좁힌다.
 
@@ -280,7 +319,7 @@ pacing, frequency cap, rate limit, DSP health, 최근 win rate 같은 real-time 
 
 이 문서는 저장소 제품을 결정하지 않는다. PostgreSQL, Redis, Valkey, MemoryDB, Kafka, Kinesis, ClickHouse 같은 제품 비교는 데이터 소유권과 정확도 등급을 확정한 뒤 진행한다.
 
-## 10. Decisions And Non-Decisions
+## 11. Decisions And Non-Decisions
 
 확정:
 
@@ -290,6 +329,9 @@ pacing, frequency cap, rate limit, DSP health, 최근 win rate 같은 real-time 
 - Money State, Transaction Event, Ledger, Analytics는 현재 구현 범위 밖이지만 제품급 확장 논의에서는 별도 데이터 종류로 다룬다.
 - Observability 데이터는 시스템 진단 자료이며 비즈니스 원장으로 사용하지 않는다.
 - Slot Ingress에서 생성된 `AuctionCommand`는 auction execution 동안 의미가 바뀌지 않는 실행 컨텍스트로 본다.
+- 현재 hot path는 request-local consistency를 요구한다.
+- SSP inventory catalog와 DSP Campaign Snapshot/index는 원본에서 재구성 가능한 serving consistency를 요구한다.
+- money/ledger는 strong business consistency가 필요하므로, 캐시나 메트릭으로 대체하지 않는다.
 
 아직 결정하지 않음:
 
