@@ -1,36 +1,21 @@
 # Low-Latency OpenRTB Bidding System
 
-이 프로젝트는 RTB 광고 도메인을 빌려, **낮은 레이턴시 제약, 고빈도 호출을 전제로 한 동시성 처리, 관측 기반 성능 최적화**를 다루는 백엔드 역량을 보여주는 것을 목표로 합니다.
+이 프로젝트는 RTB 광고 도메인을 빌려, 백엔드 성능 엔지니어링에서 중요한 두 가지 문제를 다룹니다.
 
-RTB를 선택한 이유는 광고 지식 자체가 아니라, 이 도메인의 핵심 실행 경로가 다음 세 가지 문제를 작게 드러내기 때문입니다.
+- **Tail latency와 deadline compliance**: 평균 응답 시간이 아니라 p95/p99 latency와 제한 시간 내 응답률을 기준으로 경매 hot path를 평가합니다. RTB에서는 늦게 도착한 응답이 좋은 가격이어도 사용할 수 없기 때문에, tail latency는 결과 품질과 직접 연결됩니다.
+- **동시성 하에서의 처리량과 포화 지점**: 광고 슬롯 요청은 고빈도로 발생하고, 하나의 요청은 여러 DSP 호출로 fan-out됩니다. 이 프로젝트는 RPS를 높일 때 in-flight 작업, thread, connection, HTTP/JSON 처리, DSP 호출 비용이 어떻게 병목을 만드는지 관측합니다.
 
-- **낮은 레이턴시 제약**: 제한 시간 안에 경매 결과를 반환해야 하며, 늦게 도착한 응답은 좋은 가격이어도 사용할 수 없습니다.
-- **고빈도 호출과 동시성**: 광고 슬롯 요청은 짧고 자주 발생하는 호출로 모델링하기 좋고, 하나의 요청은 여러 DSP 호출로 fan-out되어 deadline까지 응답을 수집해야 합니다.
-- **관측 기반 성능 최적화**: p95/p99 latency, timeout rate, DSP별 응답 분포를 측정하고, HTTP/JSON/경매/fan-out 비용을 분리해 병목을 설명해야 합니다.
-
-따라서 이 프로젝트는 Provider Slot Request를 받은 SSP가 OpenRTB 2.6 입찰 요청(`BidRequest`)을 생성하고, 여러 DSP의 입찰 응답(`BidResponse`)을 제한 시간 안에 수집해 winner 또는 no-winner를 결정하는 저지연 RTB 입찰 시스템을 단계적으로 구현합니다.
+이 두 문제를 p95/p99 latency, timeout rate, DSP별 응답 분포, HTTP/JSON/경매/fan-out baseline으로 측정하고 개선합니다.
 
 현재 단계는 provider-facing slot request 경로, SSP-DSP OpenRTB 경계, 기본 DSP fan-out, 낙찰 판단, k6 성능 스크립트를 함께 맞추는 단계입니다.
 
 ## RTB Problem Scope
 
-이 프로젝트는 전체 광고 플랫폼을 구현하는 것이 아니라, `게시자 -> 경량 SSP <-> 경량 DSP <- 광고주` 관계에서 광고 판매 측 경매 흐름과 광고 구매 측 입찰 판단 흐름의 성능 핵심 경로(hot path)에 집중합니다.
+전체 광고 플랫폼이 아니라 `Provider Slot Request -> OpenRTB BidRequest -> DSP fan-out -> AuctionResult`까지의 경매 hot path에 집중합니다.
 
-> Provider Slot Request를 SSP가 검증하고 OpenRTB BidRequest로 변환한 뒤, 등록된 여러 경량 DSP에게 전달하고, 제한 시간 안에 도착한 유효한 BidResponse 중 낙찰자와 낙찰가를 결정하는 문제.
-
-관심사는 다음과 같습니다.
-
-- provider-facing slot request와 SSP-DSP OpenRTB 경계 분리
-- OpenRTB 2.6의 핵심 요청/응답 계약 이해
-- OpenRTB `Imp.banner` / `Imp.video` 기반 광고 타입 표현
-- 실시간 광고 입찰 요청 처리
-- 광고 슬롯, inventory, 광고 타입, bidfloor 등 입찰 판단 정보 해석
-- 입찰 여부와 입찰가 결정
-- 여러 경량 DSP 응답 수집
-- timeout, invalid response, late bid 처리
-- 낙찰자와 낙찰가 결정
-- p95/p99 latency와 deadline 내 응답률 측정
-- 측정 결과에 기반한 성능 분석 및 최적화
+- SSP는 provider-facing 요청을 검증하고 OpenRTB 2.6 `BidRequest`를 생성합니다.
+- 여러 경량 DSP에 같은 `BidRequest`를 전달하고 제한 시간 안에 응답을 수집합니다.
+- `no-bid`, `timeout`, `late bid`, `invalid bid`를 구분하고, 유효한 bid 중 winner 또는 no-winner를 결정합니다.
 
 ## Out of Scope
 
