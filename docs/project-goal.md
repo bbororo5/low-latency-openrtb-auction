@@ -42,10 +42,10 @@ RTB의 응답 제한 시간과 불완전한 입찰 응답이라는 제약을 이
 
 1. Project Goal
 2. Product Requirements
-3. Architecture Significant Requirements
-4. Architecture Description
-5. API / Interface Specification
-6. Data Architecture
+3. Data Architecture
+4. Architecture Significant Requirements
+5. Architecture Description
+6. API / Interface Specification
 7. Implementation Technical Specification
 8. Architecture Decision Records
 9. Feature Development

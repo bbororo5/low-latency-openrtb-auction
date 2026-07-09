@@ -1,6 +1,6 @@
 # Architecture Description
 
-이 문서는 시스템 경계, 주요 실행 단위, runtime flow를 설명한다. 품질속성은 `architecture-significant-requirements.md`, API 계약은 `api-interface-specification.md`, 데이터 상태는 `data-architecture.md`, 구현 세부는 `implementation-technical-specification.md`를 기준으로 한다.
+이 문서는 시스템 경계, 주요 실행 단위, runtime flow를 설명한다. 데이터 상태와 source of truth 경계는 `data-architecture.md`를 선행 기준으로 삼고, 품질속성은 `architecture-significant-requirements.md`, API 계약은 `api-interface-specification.md`, 구현 세부는 `implementation-technical-specification.md`에서 다룬다.
 
 ## 1. Context
 

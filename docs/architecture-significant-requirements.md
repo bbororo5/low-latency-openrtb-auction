@@ -1,79 +1,82 @@
 # Architecture Significant Requirements
 
-이 문서는 RTB 입찰 시스템의 구조에 큰 영향을 주는 요구사항을 정리한다. 기능 목록을 반복하지 않고, 품질속성, 제약, 기술 리스크, 측정 가능한 시나리오를 기준으로 설계를 압박하는 요소만 다룬다.
+이 문서는 구현 기능 목록이 아니라, 아키텍처 선택을 강하게 제약하는 요구사항과 리스크를 정리한다. 설계 결론은 `architecture-description.md`, 데이터 기준은 `data-architecture.md`, API 계약은 `api-interface-specification.md`에서 다룬다.
+
+ASR은 “무엇을 만들어야 하는가”보다 “어떤 제약 때문에 구조가 단순 CRUD처럼 설계될 수 없는가”를 설명한다.
 
 ## 1. Scope
 
-현재 ASR은 provider slot request가 경량 SSP에 들어오고, SSP가 OpenRTB BidRequest를 생성해 여러 경량 DSP로 fan-out한 뒤, 제한 시간 안에 유효한 BidResponse만으로 winner/no-winner를 결정하는 hot path를 대상으로 한다.
+대상 범위는 Provider Slot Request가 들어와 SSP가 DSP들로 BidRequest를 보내고, 제한 시간 안에서 winner 또는 no-winner를 결정하는 RTB hot path다.
 
 범위 밖:
 
 - 광고 렌더링
-- impression/click/conversion tracking
+- tracking
 - billing, settlement, ledger
-- 광고 운영 백오피스
-- 실제 외부 SSP/DSP 연동
-- Kubernetes 운영 검증
+- reporting
+- external SSP/DSP integration
+- Kubernetes operation
 
-## 2. Architecture Drivers
+## 2. Significant Requirements
 
-| Driver | Why it matters | Architectural pressure |
+| Requirement | Why architecture-significant |
+|---|---|
+| 경매 결과는 deadline 안에서 결정되어야 한다. | deadline은 단순 timeout 설정이 아니라 winner 후보 자격을 결정하는 도메인 경계다. |
+| deadline 이후 도착한 bid는 가격과 무관하게 사용할 수 없다. | 높은 가격보다 시간 경계가 우선하므로 결과 수집과 후보 판단이 분리되어야 한다. |
+| 일부 DSP 실패가 전체 경매 실패가 되면 안 된다. | DSP별 결과를 독립적으로 관찰하고 분류해야 한다. |
+| no-bid와 no-winner는 시스템 장애가 아닐 수 있다. | 비즈니스 결과와 시스템 오류를 분리해야 한다. |
+| invalid bid는 winner가 될 수 없다. | bid validation과 winner selection이 분리되어야 한다. |
+| hot path는 source store 동기 조회에 의존하면 안 된다. | p95/p99 latency와 장애 전파에 직접 영향을 준다. |
+| 관측 데이터는 business event나 ledger의 대체물이 아니다. | metrics/logs/traces의 누락이나 샘플링이 비즈니스 진실을 바꾸면 안 된다. |
+
+## 3. Quality Attributes
+
+| Priority | Quality attribute | Measure |
 |---|---|---|
-| Deadline-bound auction | RTB에서는 deadline 이후 도착한 높은 bid도 사용할 수 없다. | deadline을 경매 의미의 경계로 두고, late bid를 winner 후보에서 제외한다. |
-| Low tail latency | 평균이 좋아도 p95/p99가 나쁘면 유효 bid를 놓칠 수 있다. | hot path를 작게 유지하고, 외부 원본 저장소 동기 의존을 기본으로 두지 않는다. |
-| Partial failure tolerance | 일부 DSP 실패가 전체 경매 실패가 되면 no-winner와 장애를 구분할 수 없다. | DSP별 결과를 `NO_BID`, `TIMEOUT`, `ERROR`, `LATE_BID`, `INVALID_BID`로 분리한다. |
-| Auction correctness | 잘못된 bid가 winner가 되면 이후 event/ledger를 신뢰할 수 없다. | Bid Judgment를 Winner Decision 앞에 둔다. |
-| Rebuildable serving state | hot path는 빠른 serving copy를 읽지만 원본과 혼동하면 복구 모델이 깨진다. | inventory/campaign source of truth와 serving copy를 분리한다. |
-| Observability without business truth leakage | metrics/logs/traces는 장애 분석에 필요하지만 원장이나 event의 대체물이 아니다. | observability와 business event/ledger를 분리한다. |
-
-## 3. Priority Quality Attributes
-
-| Priority | Quality attribute | Domain reason | Architecture rule |
-|---|---|---|---|
-| 1 | Deadline compliance | deadline 이후 응답은 경매에 사용할 수 없다. | deadline 이후 도착한 응답은 가격과 무관하게 후보에서 제외한다. |
-| 2 | Low latency | 광고 요청 처리 시간이 길수록 deadline을 넘길 가능성이 커진다. | ProviderSlotRequest부터 AuctionResult까지 p95/p99를 측정한다. |
-| 3 | Auction result consistency | invalid bid가 낙찰되면 경매 결과를 설명할 수 없다. | BidResponse 검증을 winner selection 앞에 둔다. |
-| 4 | Failure isolation | 일부 DSP 장애가 전체 경매 장애로 번지면 안 된다. | DSP별 결과를 분리하고, 후보가 없으면 no-winner를 정상 결과로 반환한다. |
-| 5 | Observability | 지연, timeout, invalid bid의 원인을 설명할 수 있어야 한다. | latency, deadline compliance, timeout, late bid, invalid bid, no-winner를 측정한다. |
+| 1 | Deadline compliance | 제한 시간 안에 winner/no-winner가 결정된 비율 |
+| 2 | Tail latency | Provider Slot Request부터 AuctionResult까지 p95/p99 |
+| 3 | Auction correctness | invalid/late bid가 winner가 되지 않는지 |
+| 4 | Failure isolation | 일부 DSP timeout/error가 전체 장애로 번지지 않는지 |
+| 5 | Explainability | no-bid, timeout, late bid, invalid bid, no-winner가 구분되는지 |
 
 ## 4. Quality Attribute Scenarios
 
-| ID | Scenario | Response | Measure |
+| ID | Scenario | Expected response | Measure |
 |---|---|---|---|
-| QA-001 | 일부 DSP가 deadline 안에 응답하지 않는다. | 해당 DSP를 `TIMEOUT`으로 분류하고, deadline 안에 관찰된 결과만으로 winner/no-winner를 결정한다. | deadline compliance, auction latency p95/p99, timeout count |
-| QA-002 | 가장 높은 bid가 deadline 이후 도착한다. | `LATE_BID`로 분류하고 winner 후보에서 제외한다. | late bid count, winner decision trace |
-| QA-003 | BidResponse가 원 요청과 맞지 않는다. | `INVALID_BID`로 분류하고 winner 후보에서 제외한다. | invalid bid count, invalid reason |
-| QA-004 | 유효한 bid가 하나도 없다. | 시스템 장애가 아니라 정상 `NO_WINNER` 결과를 반환한다. | no-winner rate, no-bid count, timeout count |
-| QA-005 | 동시 요청 수 또는 DSP 수가 증가한다. | 처리량, p95/p99, timeout 비율 변화를 측정한다. | observed throughput, auction latency p95/p99, timeout rate |
-| QA-006 | 광고 타입별 지연 영향이 다르다. | media type별 timeout 정책을 분리할 수 있게 둔다. | media type별 p95/p99, timeout ratio |
+| QA-001 | 일부 DSP가 deadline 안에 응답하지 않는다. | 해당 DSP만 timeout으로 분류하고 나머지 결과로 경매를 끝낸다. | timeout count, deadline compliance |
+| QA-002 | 가장 높은 bid가 deadline 이후 도착한다. | late bid로 분류하고 winner 후보에서 제외한다. | late bid count, winner correctness |
+| QA-003 | BidResponse가 원 요청과 맞지 않는다. | invalid bid로 분류하고 winner 후보에서 제외한다. | invalid bid count, invalid reason |
+| QA-004 | 모든 DSP가 no-bid 또는 non-candidate 결과를 낸다. | 정상 no-winner 결과를 반환한다. | no-winner rate, result distribution |
+| QA-005 | 동시 요청 수 또는 DSP 수가 증가한다. | p95/p99와 timeout 비율 변화를 관찰한다. | latency p95/p99, timeout rate |
+| QA-006 | serving copy가 준비되지 않았다. | 요청 의미를 추측하지 않고 해당 경로를 중단한다. | rejected request count, startup readiness |
 
 ## 5. Constraints
 
-| Constraint | Impact |
+| Constraint | Meaning |
 |---|---|
-| OpenRTB 전체가 아니라 banner/simple video subset만 다룬다. | multi-imp, native, audio, PMP, deal은 현재 API와 테스트 범위에서 제외한다. |
-| Provider-facing input은 OpenRTB BidRequest가 아니다. | SSP가 inventory와 조합해 OpenRTB BidRequest를 생성한다. |
-| Hot path는 원본 inventory/campaign store를 매 요청마다 동기 조회하지 않는다. | serving copy/snapshot 경계를 유지한다. |
-| Money, ledger, billing은 현재 구현 범위 밖이다. | strong business consistency는 설계 후보로만 남기고 hot path에 넣지 않는다. |
-| Event output은 현재 컨테이너나 포트로 구현하지 않는다. | event identity, outbox, duplicate handling은 후속 결정으로 둔다. |
+| OpenRTB subset만 다룬다. | banner/simple video, single impression, first-price, USD를 기본 범위로 둔다. |
+| Provider-facing input은 OpenRTB BidRequest가 아니다. | SSP가 provider input과 inventory를 조합해 DSP-facing BidRequest를 만든다. |
+| Data ownership을 먼저 구분한다. | source of truth, serving copy, transient decision, event 후보를 혼동하지 않는다. |
+| Money/ledger는 현재 구현 범위 밖이다. | strong consistency가 필요한 영역을 hot path 캐시나 metrics로 대체하지 않는다. |
+| Event output은 아직 구현하지 않는다. | event identity, duplicate handling, replay policy를 먼저 설계해야 한다. |
 
-## 6. Risks And Follow-Up Decisions
+## 6. Risks
 
-| Risk | Current handling | Follow-up |
+| Risk | Impact | Follow-up |
 |---|---|---|
-| Winner tie-break가 결정적이지 않으면 재현 테스트가 흔들릴 수 있다. | first-price winner rule을 사용한다. | 동일 가격 tie-break를 코드와 테스트로 고정한다. |
-| OpenRTB no-bid 표현을 어디까지 허용할지 불명확할 수 있다. | 명시적 no-bid 응답은 정상 처리한다. | empty `seatbid`를 no-bid로 볼지 `api-interface-specification.md`와 테스트에서 확정한다. |
-| Malformed response를 gateway error로 볼지 invalid bid로 볼지 경계가 애매하다. | 현재는 구현 관찰값 기준으로 분류한다. | DSP Gateway와 Bid Judge의 책임 경계를 테스트로 고정한다. |
-| Serving copy freshness 정책이 없다. | source of truth와 serving copy를 분리한다. | stale 허용 범위와 refresh/cutover 정책을 별도 설계한다. |
+| tie-break rule이 명확하지 않다. | 같은 입력에서 winner 재현성이 흔들릴 수 있다. | deterministic tie-break를 테스트로 고정한다. |
+| no-bid 표현 허용 범위가 모호하다. | DSP 응답 해석이 Gateway와 Bid Judge 사이에서 흔들릴 수 있다. | API 계약에서 허용 표현을 확정한다. |
+| malformed response 분류 경계가 모호하다. | transport error와 invalid bid 의미가 섞일 수 있다. | 책임 owner와 테스트를 고정한다. |
+| serving copy freshness 정책이 없다. | 원본 변경과 hot path 판단 사이 불일치 허용 범위가 불명확하다. | Data Architecture 후속 결정으로 다룬다. |
 
-## 7. Verification
+## 7. Verification Focus
 
-ASR 검증은 기능 성공 여부보다 품질속성 관찰 가능성에 초점을 둔다.
+ASR 검증은 구현 기능 완성보다 아키텍처 의미가 깨지지 않는지에 초점을 둔다.
 
 | Requirement | Verification |
 |---|---|
-| deadline 이후 bid 제외 | late bid 테스트와 winner decision 검증 |
-| invalid bid 제외 | request id, imp id, floor, currency, media mismatch 테스트 |
-| no-winner 정상 처리 | all no-bid/all timeout/all invalid 시나리오 테스트 |
-| latency 관찰 | p50/p95/p99와 deadline compliance 측정 |
-| partial failure 격리 | 일부 DSP timeout/error가 전체 500으로 번지지 않는지 확인 |
+| deadline 이후 bid 제외 | late bid 시나리오 테스트 |
+| invalid bid winner 방지 | request id, imp id, floor, currency, media mismatch 테스트 |
+| no-winner 정상 처리 | all no-bid, all timeout, all invalid 시나리오 테스트 |
+| partial failure isolation | 일부 DSP timeout/error가 전체 500으로 번지지 않는지 확인 |
+| result explainability | AuctionResult와 metrics에서 원인 분류가 유지되는지 확인 |
