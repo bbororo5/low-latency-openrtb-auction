@@ -9,9 +9,17 @@
 
 현재 단계는 provider-facing slot request 경로, SSP-DSP OpenRTB 경계, 기본 DSP fan-out, 낙찰 판단, k6 성능 스크립트를 함께 맞추는 단계입니다.
 
-## RTB Problem Scope
+## RTB Domain Overview
 
-전체 광고 플랫폼이 아니라 `Provider Slot Request -> OpenRTB BidRequest -> DSP fan-out -> AuctionResult`까지의 경매 hot path에 집중합니다.
+RTB(Real-Time Bidding)는 광고 슬롯이 열리는 순간 여러 구매 측 시스템이 입찰에 참여하고, 제한 시간 안에 광고 노출 기회의 구매자를 결정하는 실시간 경매 방식입니다.
+
+이 흐름에서 SSP(Supply-Side Platform)는 publisher의 광고 슬롯 요청을 받아 입찰 가능한 요청으로 만들고, 여러 DSP(Demand-Side Platform)에 전달합니다. DSP는 캠페인 조건과 입찰 전략에 따라 bid 또는 no-bid를 반환하고, SSP는 제한 시간 안에 도착한 유효한 bid 중 winner를 결정합니다.
+
+OpenRTB는 SSP와 DSP 사이에서 입찰 요청(`BidRequest`)과 입찰 응답(`BidResponse`)을 주고받기 위한 표준 표현입니다.
+
+## Project Overview
+
+이 프로젝트는 전체 광고 플랫폼이 아니라 `Provider Slot Request -> OpenRTB BidRequest -> DSP fan-out -> AuctionResult`까지의 경매 hot path에 집중합니다.
 
 - SSP는 provider-facing 요청을 검증하고 OpenRTB 2.6 `BidRequest`를 생성합니다.
 - 여러 경량 DSP에 같은 `BidRequest`를 전달하고 제한 시간 안에 응답을 수집합니다.
