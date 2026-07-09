@@ -19,7 +19,7 @@ OpenRTB는 SSP와 DSP 사이에서 입찰 요청(`BidRequest`)과 입찰 응답(
 
 ## Project Overview
 
-이 프로젝트는 전체 광고 플랫폼이 아니라 `Provider Slot Request -> OpenRTB BidRequest -> DSP fan-out -> AuctionResult`까지의 경매 hot path에 집중합니다.
+이 프로젝트는 광고 슬롯이 열렸을 때 SSP가 여러 DSP에 입찰을 요청하고, 제한 시간 안에 도착한 응답만으로 낙찰 여부를 결정하는 경매 실행 경로에 집중합니다.
 
 - SSP는 provider-facing 요청을 검증하고 OpenRTB 2.6 `BidRequest`를 생성합니다.
 - 여러 경량 DSP에 같은 `BidRequest`를 전달하고 제한 시간 안에 응답을 수집합니다.
