@@ -536,6 +536,22 @@ SSP 책임 owner:
 
 owner가 분명하지 않은 책임은 뒤 컴포넌트로 흘러가며 중복 방어 로직을 만든다. 이 프로젝트에서는 메시지를 넘기기 전에 각 owner가 자기 경계의 불변조건을 만족시킨다고 본다.
 
+현재 SSP 계약의 구현 하강점:
+
+| Design concern | Current implementation lever | Deferred lever |
+|---|---|---|
+| provider slot request 유효성 | `/publisher/auction` 입력 검증과 `RejectedSlotRequest` | provider 인증, SDK/ad tag 계약 |
+| placement 해석 | `Inventory Catalog` serving copy 조회 | inventory source DB 제약, admin workflow |
+| BidRequest 정합성 | `BidRequest Factory` 단위 테스트와 `AuctionCommand` 불변조건 | multi-imp, user/device/site/app 확장 |
+| deadline 준수 | `Auction Flow`와 `DSP Gateway` timeout 처리 | adaptive timeout, DSP health routing |
+| DSP 결과 분류 | `DspCallResult` status와 `Bid Judge` 분류 테스트 | retry, circuit breaker, partial outage policy |
+| winner 결정 | `Winner Selector` deterministic rule 테스트 | second-price, deal, private auction |
+| event output | 현재 없음. `AuctionResult`는 응답 메시지다. | event identity, outbox, stream, duplicate handling |
+| DB transaction | 현재 hot path에는 DB transaction이 없다. | money reservation, ledger write, reconciliation |
+| DB constraint | 현재 serving copy 전제만 둔다. | inventory/campaign source schema, uniqueness, lifecycle |
+
+이 표는 구현을 서두르기 위한 목록이 아니다. 설계 결정을 코드, 테스트, DB, 이벤트 중 어디로 내려야 하는지 분류하기 위한 기준이다.
+
 SSP가 판단하는 것:
 
 - 요청이 경매를 시작할 수 있는 형식인지
