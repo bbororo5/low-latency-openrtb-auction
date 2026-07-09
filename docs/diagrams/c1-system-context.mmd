@@ -1,9 +1,11 @@
 flowchart LR
     publisher["Slot Client"]
     advertiser["Campaign Setup"]
+    inventoryOwner["Inventory Setup"]
     system["RTB Bidding System"]
 
     publisher -->|"ProviderSlotRequest"| system
     system -->|"AuctionResult"| publisher
 
     advertiser -->|"Campaign data"| system
+    inventoryOwner -->|"Inventory data"| system

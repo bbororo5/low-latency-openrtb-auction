@@ -3,7 +3,7 @@ flowchart LR
 
     subgraph ssp["Lightweight SSP Application"]
         slotRequest["Slot Request Handler"]
-        inventory["Inventory Catalog"]
+        inventory["Inventory Catalog\n(serving copy)"]
         bidRequest["BidRequest Factory"]
         auctionFlow["Auction Flow"]
         dspGateway["DSP Gateway"]
@@ -13,7 +13,7 @@ flowchart LR
 
     subgraph dsp["Lightweight DSP Application"]
         bidHandler["Bid Handler"]
-        campaignLookup["Campaign Lookup"]
+        campaignLookup["Campaign Lookup\n(snapshot/index)"]
         matcher["Matcher"]
         pricing["Pricing"]
         bidBuilder["Bid Builder"]

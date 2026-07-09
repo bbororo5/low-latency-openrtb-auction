@@ -4,6 +4,8 @@
 
 PRD가 무엇을 해결할지 정의하고, Architecture가 어떤 구조로 바라볼지 정의한다면, Tech Spec은 개발자가 같은 기준으로 구현할 수 있도록 API 계약, 지원 필드, 실행 흐름, 데이터 모델, 실패 처리, 테스트 기준을 구체화한다.
 
+데이터의 source of truth, derived serving state, transient input, event, observability 구분은 Data State Architecture를 기준으로 한다. 이 문서는 그 기준을 구현 계약과 컴포넌트 책임으로 옮기는 역할을 한다.
+
 ## 1. Purpose & Scope
 
 ### 1.1 Purpose
@@ -287,11 +289,15 @@ Campaign Data Store에 저장되는 데이터는 3.1의 범위로 제한한다. 
 
 저장소의 실제 구현 방식은 이 장에서 확정하지 않는다. 현재 구현에서는 재현 가능한 seed data로 serving copy를 구성하고, 저장소 기술 선택은 hot path나 재현성에 영향을 줄 때 별도 검토한다.
 
+Campaign Data Store는 source of truth 후보이고, Campaign Snapshot과 DSP 내부 Repository/Index는 derived serving state다. 이 둘을 같은 책임으로 취급하지 않는다.
+
 ### 3.3 SSP Inventory Store -> SSP Inventory Catalog
 
 SSP inventory는 provider/placement별 공급 지면 설정의 기준 데이터다. 현재 코드의 `InMemoryInventoryCatalog`는 이 기준 데이터를 프로세스 내부에서 바로 들고 있는 최소 구현이지만, 제품급 구조에서는 외부 inventory store가 원본이고 SSP hot path는 그 데이터를 로드한 serving copy를 읽는 형태가 자연스럽다.
 
 이 문서는 외부 inventory store 제품을 확정하지 않는다. PostgreSQL 같은 영속 DB, Redis/Valkey 계열 인메모리 store, 관리형 memory store, 또는 별도 config 배포 방식은 아직 선택하지 않는다. 다만 경매 요청 처리 중 provider/placement 조회를 외부 저장소 동기 호출에 의존하지 않는다는 원칙은 둔다.
+
+Inventory Store는 source of truth 후보이고, Inventory Catalog는 Slot Ingress가 읽는 derived serving state다. 이 구분은 저장소 제품 선택보다 우선하는 구현 계약이다.
 
 Inventory Catalog가 hot path에서 제공해야 하는 데이터:
 
@@ -385,7 +391,7 @@ flowchart LR
 
     subgraph ssp["Lightweight SSP Application"]
         slotRequest["Slot Request Handler"]
-        inventory["Inventory Catalog"]
+        inventory["Inventory Catalog\n(serving copy)"]
         bidRequest["BidRequest Factory"]
         auctionFlow["Auction Flow"]
         dspGateway["DSP Gateway"]
@@ -395,7 +401,7 @@ flowchart LR
 
     subgraph dsp["Lightweight DSP Application"]
         bidHandler["Bid Handler"]
-        campaignLookup["Campaign Lookup"]
+        campaignLookup["Campaign Lookup\n(snapshot/index)"]
         matcher["Matcher"]
         pricing["Pricing"]
         bidBuilder["Bid Builder"]

@@ -1,11 +1,13 @@
 flowchart TB
     client["Slot Client"]
     advertiser["Campaign Setup"]
+    inventoryOwner["Inventory Setup"]
 
     subgraph boundary["RTB Bidding System"]
         ssp["Lightweight SSP Application"]
         dsp["Lightweight DSP Application"]
-        store[("Campaign Data Store")]
+        inventoryStore[("Inventory Data Store")]
+        campaignStore[("Campaign Data Store")]
     end
 
     client -->|"ProviderSlotRequest"| ssp
@@ -14,5 +16,8 @@ flowchart TB
     ssp -->|"BidRequest"| dsp
     dsp -->|"BidResponse / No-Bid"| ssp
 
-    advertiser -->|"Campaign data"| store
-    store -->|"Load snapshot"| dsp
+    inventoryOwner -->|"Inventory data"| inventoryStore
+    inventoryStore -->|"Load serving catalog"| ssp
+
+    advertiser -->|"Campaign data"| campaignStore
+    campaignStore -->|"Load snapshot"| dsp
