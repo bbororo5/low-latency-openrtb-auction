@@ -10,6 +10,8 @@
 
 이 문서는 현재 구현 범위를 확장하지 않는다. 현재 구현은 Provider Slot Request를 받아 SSP가 OpenRTB BidRequest를 생성하고, BidResponse 수집과 낙찰 판단까지 이어지는 hot path에 집중한다. 과금, 정산, 리포팅, 광고 운영 백오피스는 여전히 범위 밖이다.
 
+API 필드와 endpoint 계약은 `API_SPEC.md`, 시스템 view와 런타임 구조는 `ARCHITECTURE.md`, 구현 컴포넌트와 테스트 전략은 `TECH_SPEC.md`를 기준으로 한다.
+
 ## 2. Design Lens
 
 이 문서는 Martin Kleppmann의 데이터 시스템 관점에 가깝게, 저장소를 제품 단위가 아니라 데이터의 의미와 흐름 단위로 본다.
@@ -69,7 +71,7 @@
 
 ## 5. Data State Map
 
-이 장은 각 데이터의 비즈니스 의미와 상태 성격을 정리한다. 상세 필드는 Tech Spec에서 다룬다.
+이 장은 각 데이터의 비즈니스 의미와 상태 성격을 정리한다. API 필드는 `API_SPEC.md`, 구현 컴포넌트는 `TECH_SPEC.md`에서 다룬다.
 
 ### 5.1 Auction Opportunity
 
