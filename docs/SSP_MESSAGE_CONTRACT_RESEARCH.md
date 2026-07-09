@@ -1,6 +1,8 @@
 # SSP Message Contract Research
 
-이 문서는 SSP 5개 컴포넌트의 책임을 확정하기 전에, RTB/OpenRTB 업계 기준으로 협력 메시지와 불변조건을 정합하기 위한 리서치 노트다.
+이 문서는 SSP 5개 컴포넌트의 책임을 확정하기 전에, RTB/OpenRTB 업계 기준으로 협력 메시지와 불변조건을 정합하기 위해 작성한 리서치 노트다.
+
+현재 기준 문서는 `TECH_SPEC.md`다. 이 문서는 업계 기준과 설계 근거를 보존하는 참고 자료이며, 구현 계약을 직접 바꾸지 않는다.
 
 목적은 OpenRTB 전체를 구현하는 것이 아니다. IAB Tech Lab OpenRTB 2.6과 대형 구현체 문서를 기준으로, 현재 프로젝트의 SSP hot path에 필요한 메시지 계약만 좁힌다.
 
@@ -144,7 +146,7 @@ Invariants:
 
 ## Code Alignment Notes
 
-These are not implementation decisions yet; they are points to check after component boundaries are finalized.
+These notes explain where the current code still needs alignment with the message contracts promoted into `TECH_SPEC.md`.
 
 | Area | Observation |
 |---|---|
@@ -154,14 +156,8 @@ These are not implementation decisions yet; they are points to check after compo
 | Empty seatbid | Current `BidJudge` treats empty `seatbid` under `BID_RECEIVED` as invalid. Industry guidance allows empty `seatbid` as no-bid, so the project should either support it or document that only HTTP 204 no-bid is accepted from the lightweight DSP path. |
 | Malformed bid response | Gateway maps JSON decode failure to `ERROR`. This is defensible as transport/payload failure, but if the payload came from a reachable DSP, `INVALID_BID` may be more domain-specific. Choose one and test it. |
 
-## Next Step
+## Current Use
 
-Use this research note to define the SSP component contracts in this order:
+Use this research note only as supporting context when reviewing or evolving the SSP message contracts in `TECH_SPEC.md`.
 
-1. Slot Ingress contract.
-2. Auction Execution contract.
-3. DSP Gateway contract.
-4. Bid Judgment contract.
-5. Winner Decision contract.
-
-After that, update code only where the current implementation violates the chosen message invariants.
+Do not add new implementation scope directly from this note. Promote a decision to `TECH_SPEC.md` or an ADR first, then update code only where the current implementation violates the chosen contract.
