@@ -16,8 +16,9 @@
   <rect x="280" y="110" width="650" height="365" rx="16" fill="#eef6ff" stroke="#93c5fd" stroke-width="2"/>
   <text x="605" y="144" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#1e3a8a">RTB Bidding System</text>
 
-  <rect x="70" y="215" width="165" height="88" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
-  <text x="152" y="265" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#0f172a">Slot Client</text>
+  <rect x="55" y="215" width="195" height="88" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
+  <text x="152" y="254" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#0f172a">Publisher</text>
+  <text x="152" y="276" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#0f172a">Ad Slot</text>
 
   <rect x="355" y="190" width="205" height="112" rx="12" fill="#1d4ed8" filter="url(#shadow)"/>
   <text x="458" y="237" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#ffffff">Lightweight SSP</text>
@@ -33,15 +34,7 @@
   <rect x="355" y="370" width="205" height="72" rx="12" fill="#dbeafe" stroke="#93c5fd" stroke-width="2" filter="url(#shadow)"/>
   <text x="458" y="412" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#1e3a8a">Inventory Data Store</text>
 
-  <rect x="965" y="370" width="120" height="72" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
-  <text x="1025" y="401" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Campaign</text>
-  <text x="1025" y="422" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Setup</text>
-
-  <rect x="70" y="370" width="120" height="72" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
-  <text x="130" y="401" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Inventory</text>
-  <text x="130" y="422" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Setup</text>
-
-  <path d="M235 245 L349 245" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+  <path d="M250 245 L349 245" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
   <text x="292" y="226" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">ProviderSlotRequest</text>
 
   <path d="M355 286 C302 338 235 334 184 304" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
@@ -53,14 +46,8 @@
   <path d="M675 274 L566 274" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
   <text x="620" y="298" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">BidResponse / No-Bid</text>
 
-  <path d="M965 406 L886 406" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
-  <text x="925" y="387" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">Campaign data</text>
-
   <path d="M778 370 L778 308" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
   <text x="836" y="342" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">Load snapshot</text>
-
-  <path d="M190 406 L349 406" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
-  <text x="270" y="387" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">Inventory data</text>
 
   <path d="M458 370 L458 308" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
   <text x="525" y="342" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#334155">Load serving catalog</text>

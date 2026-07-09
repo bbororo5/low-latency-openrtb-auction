@@ -20,8 +20,9 @@
   <text x="935" y="138" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#14532d">Lightweight DSP</text>
 
   <rect x="45" y="292" width="125" height="72" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="url(#shadow)"/>
-  <text x="108" y="322" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Slot</text>
-  <text x="108" y="343" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Client</text>
+  <text x="108" y="312" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#0f172a">Publisher</text>
+  <text x="108" y="331" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#0f172a">Ad</text>
+  <text x="108" y="350" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#0f172a">Slot</text>
 
   <rect x="240" y="168" width="155" height="62" rx="10" fill="#1d4ed8" filter="url(#shadow)"/>
   <text x="318" y="193" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#ffffff">Slot Request</text>

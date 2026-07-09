@@ -387,7 +387,7 @@ direct `POST /openrtb/auction` 경로는 보조 경로다. 이 경로에서는 2
 
 ```mermaid
 flowchart LR
-    client["Slot Client"]
+    client["Publisher / Ad Slot"]
 
     subgraph ssp["Lightweight SSP Application"]
         slotRequest["Slot Request Handler"]
