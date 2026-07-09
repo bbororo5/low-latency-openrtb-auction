@@ -221,7 +221,54 @@ pacing, frequency cap, rate limit, DSP health, 최근 win rate 같은 real-time 
 | 비즈니스 transaction event와 metrics/logs는 분리한다. | observability 데이터를 과금/정산 근거로 사용하기 시작하면 retention, sampling, cardinality, privacy, 재처리 전략을 모두 바꿔야 한다. |
 | 현재 hot path는 외부 저장소 동기 의존을 기본으로 두지 않는다. | 나중에 동기 DB/Redis 조회를 hot path에 넣으면 p95/p99, timeout 전파, backpressure, 장애 격리 전략이 바뀐다. 필요한 경우 별도 ADR과 성능 검증이 필요하다. |
 
-## 8. Research Boundary
+## 8. State Transitions
+
+이 장은 현재 hot path에서 필요한 상태 전이만 다룬다. money, ledger, billing, win notice, impression 같은 후속 흐름의 상태 전이는 아직 정의하지 않는다.
+
+### 8.1 Auction Lifecycle
+
+| From | Trigger | To | Meaning |
+|---|---|---|---|
+| Provider slot input | Slot Ingress accepts request | Auction command accepted | 경매 실행 가능한 내부 컨텍스트가 만들어졌다. |
+| Provider slot input | Slot Ingress rejects request | Request rejected | DSP 호출 없이 요청 실패 결과로 끝난다. |
+| Auction command accepted | Auction Execution starts DSP calls | Waiting for DSP results | deadline 안에서 DSP 응답을 수집한다. |
+| Waiting for DSP results | Deadline reached or all calls observed | Judging bids | 수집된 DSP 호출 결과를 유효 후보와 비후보로 분류한다. |
+| Judging bids | Valid candidate exists | Selecting winner | 경매 규칙으로 winner를 고른다. |
+| Judging bids | No valid candidate exists | No winner result | 정상적인 no-winner 결과로 끝난다. |
+| Selecting winner | Winner selected | Winner result | 유효 후보 중 하나가 낙찰 결과가 된다. |
+
+### 8.2 DSP Result Classification
+
+| Observed state | Transition rule | Candidate status |
+|---|---|---|
+| No response before deadline | classify as `TIMEOUT` | Not a candidate |
+| Response after deadline | classify as `LATE_BID` | Not a candidate |
+| Explicit no-bid | classify as `NO_BID` | Not a candidate |
+| Transport or decode failure | classify as `ERROR` | Not a candidate |
+| BidResponse received | send to Bid Judgment | Not a candidate yet |
+| BidResponse fails validation | classify as `INVALID_BID` | Not a candidate |
+| BidResponse passes validation | create valid candidate | Candidate |
+
+### 8.3 Winner Decision
+
+| Input | Transition | Result |
+|---|---|---|
+| Empty valid candidate list | skip winner selection | `NO_WINNER` |
+| One valid candidate | select candidate | `WINNER` |
+| Multiple valid candidates | apply first-price winner rule | `WINNER` |
+| Multiple valid candidates with same price | apply deterministic tie-break | `WINNER` |
+
+### 8.4 Serving State Lifecycle
+
+| State | Transition | Meaning |
+|---|---|---|
+| Source data exists | load serving copy | SSP/DSP hot path can use local serving state. |
+| Serving copy ready | handle auction request | hot path does not synchronously read source store. |
+| Serving copy missing | reject or disable affected path | system must not guess placement or campaign state. |
+| Process restarted | rebuild serving copy from source | derived serving state must be reconstructable. |
+| Source data changed | refresh policy applies | freshness and cutover policy are future decisions. |
+
+## 9. Research Boundary
 
 저장소 기술 리서치는 다음 질문으로 좁힌다.
 
@@ -233,7 +280,7 @@ pacing, frequency cap, rate limit, DSP health, 최근 win rate 같은 real-time 
 
 이 문서는 저장소 제품을 결정하지 않는다. PostgreSQL, Redis, Valkey, MemoryDB, Kafka, Kinesis, ClickHouse 같은 제품 비교는 데이터 소유권과 정확도 등급을 확정한 뒤 진행한다.
 
-## 9. Decisions And Non-Decisions
+## 10. Decisions And Non-Decisions
 
 확정:
 
