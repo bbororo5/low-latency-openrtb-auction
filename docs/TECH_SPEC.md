@@ -521,6 +521,21 @@ SSP 내부 메시지 계약:
 
 이 메시지 계약의 핵심은 `DspCallResult`와 `ValidBidCandidate`를 분리하는 것이다. DSP가 무엇인가를 반환했다는 사실과, 그 반환값이 낙찰 후보가 될 수 있다는 판단은 다른 책임이다.
 
+SSP 책임 owner:
+
+| Concern | Owner | Boundary |
+|---|---|---|
+| provider-facing 요청 해석 | Slot Request Handler | OpenRTB 의미를 추측하지 않고 프로젝트 입력만 검증한다. |
+| 공급 지면 기준 데이터 제공 | Inventory Catalog | 원본 store가 아니라 hot-path serving copy를 읽는 책임이다. |
+| DSP-facing BidRequest 생성 | BidRequest Factory | `AuctionCommand`의 id, imp, media, floor, currency 정합성을 만든다. |
+| 경매 시간 경계 | Auction Flow | deadline을 계산하고, deadline 이후 결과가 winner path에 들어가지 않게 한다. |
+| 외부 DSP 호출 관찰 | DSP Gateway | HTTP 결과를 `DspCallResult`로 표현하지만 낙찰 후보 여부는 판단하지 않는다. |
+| bid 유효성 판단 | Bid Judge | `DspCallResult`와 원 요청을 비교해 valid candidate 또는 invalid/non-candidate로 분류한다. |
+| 낙찰 규칙 적용 | Winner Selector | 이미 유효한 후보 중 winner/no-winner만 결정한다. |
+| provider-facing 결과 조립 | Auction Flow | 내부 판단 결과를 `AuctionResult`로 조합한다. |
+
+owner가 분명하지 않은 책임은 뒤 컴포넌트로 흘러가며 중복 방어 로직을 만든다. 이 프로젝트에서는 메시지를 넘기기 전에 각 owner가 자기 경계의 불변조건을 만족시킨다고 본다.
+
 SSP가 판단하는 것:
 
 - 요청이 경매를 시작할 수 있는 형식인지
