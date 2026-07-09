@@ -186,6 +186,25 @@ pacing, frequency cap, rate limit, DSP health, 최근 win rate 같은 real-time 
 | Transaction event | win, impression, billing, settlement 같은 비즈니스 사실은 제품급 구조에서 append-only event 후보로 본다. 기록된 사실은 수정보다 보정 이벤트로 처리하는 모델을 우선 검토한다. |
 | Observability data | metrics, logs, traces는 시스템 진단 데이터이며 비즈니스 원장이나 정산 기준 데이터의 대체물이 아니다. |
 
+### 6.1 Failure-Derived Invariants
+
+이 불변조건은 Architecture의 실패 시나리오에서 도출한 것이다. 세부 구현 규칙이 아니라, 이후 상태 전이와 테스트로 내려갈 때 깨지면 안 되는 의미 규칙이다.
+
+| Failure surface | Invariant |
+|---|---|
+| Request failure | 경매를 시작할 수 없는 요청은 DSP Gateway까지 전달되면 안 된다. |
+| Request failure | `AcceptedSlotRequest`만 `AuctionCommand`를 가질 수 있다. |
+| Timing failure | deadline 이후 도착한 bid는 가격과 무관하게 winner 후보가 될 수 없다. |
+| DSP response failure | no-bid, timeout, late bid, invalid bid는 서로 다른 의미로 분류되어야 한다. |
+| Competition | Winner Selector는 Bid Judgment를 통과한 valid candidate만 입력으로 받아야 한다. |
+| Competition | 같은 입력과 같은 관찰 결과에 대해 winner decision은 재현 가능해야 한다. |
+| No winner | valid candidate가 없으면 no-winner는 정상 경매 결과이며 시스템 장애가 아니다. |
+| Serving state failure | Inventory serving catalog가 준비되지 않은 상태에서는 placement를 추측해서 경매를 시작하지 않는다. |
+| Serving state failure | Campaign Snapshot이 준비되지 않은 DSP는 정상 bid 판단을 수행한 것으로 취급하지 않는다. |
+| Duplicate / retry | 현재 hot path는 provider slot request retry에 대한 end-to-end idempotency를 보장하지 않는다. 이 보장은 event output 또는 money flow 도입 시 별도 설계 대상이다. |
+| Event boundary | AuctionResult 이후의 business event가 필요해지면 event identity와 duplicate handling이 먼저 정의되어야 한다. |
+| Observability | metrics/logs/traces의 존재 여부는 AuctionResult, billing, ledger의 진실성을 결정하지 않는다. |
+
 ## 7. Critical Invariants
 
 다음 불변조건은 후속 설계에 큰 영향을 주며, 나중에 바꾸면 저장소 경계, 장애 복구, 테스트 전략, 성능 가정까지 다시 손봐야 하는 비용이 크다.
