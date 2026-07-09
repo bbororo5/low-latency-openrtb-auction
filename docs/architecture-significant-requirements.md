@@ -44,7 +44,7 @@
 | QA-002 | 가장 높은 bid가 deadline 이후 도착한다. | `LATE_BID`로 분류하고 winner 후보에서 제외한다. | late bid count, winner decision trace |
 | QA-003 | BidResponse가 원 요청과 맞지 않는다. | `INVALID_BID`로 분류하고 winner 후보에서 제외한다. | invalid bid count, invalid reason |
 | QA-004 | 유효한 bid가 하나도 없다. | 시스템 장애가 아니라 정상 `NO_WINNER` 결과를 반환한다. | no-winner rate, no-bid count, timeout count |
-| QA-005 | 동시 요청 수 또는 DSP endpoint 수가 증가한다. | 처리량, p95/p99, timeout 비율 변화를 측정한다. | observed throughput, auction latency p95/p99, timeout rate |
+| QA-005 | 동시 요청 수 또는 DSP 수가 증가한다. | 처리량, p95/p99, timeout 비율 변화를 측정한다. | observed throughput, auction latency p95/p99, timeout rate |
 | QA-006 | 광고 타입별 지연 영향이 다르다. | media type별 timeout 정책을 분리할 수 있게 둔다. | media type별 p95/p99, timeout ratio |
 
 ## 5. Constraints
@@ -62,7 +62,7 @@
 | Risk | Current handling | Follow-up |
 |---|---|---|
 | Winner tie-break가 결정적이지 않으면 재현 테스트가 흔들릴 수 있다. | first-price winner rule을 사용한다. | 동일 가격 tie-break를 코드와 테스트로 고정한다. |
-| Empty `seatbid` no-bid 처리가 OpenRTB 구현 관행과 어긋날 수 있다. | HTTP 204 no-bid는 정상 처리한다. | empty `seatbid`를 no-bid로 볼지 `api-interface-specification.md`와 테스트에서 확정한다. |
+| OpenRTB no-bid 표현을 어디까지 허용할지 불명확할 수 있다. | 명시적 no-bid 응답은 정상 처리한다. | empty `seatbid`를 no-bid로 볼지 `api-interface-specification.md`와 테스트에서 확정한다. |
 | Malformed response를 gateway error로 볼지 invalid bid로 볼지 경계가 애매하다. | 현재는 구현 관찰값 기준으로 분류한다. | DSP Gateway와 Bid Judge의 책임 경계를 테스트로 고정한다. |
 | Serving copy freshness 정책이 없다. | source of truth와 serving copy를 분리한다. | stale 허용 범위와 refresh/cutover 정책을 별도 설계한다. |
 

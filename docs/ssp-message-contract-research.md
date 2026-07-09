@@ -4,6 +4,8 @@
 
 현재 SSP 메시지 계약의 기준 문서는 `api-interface-specification.md`다. 이 문서는 업계 기준과 설계 근거를 보존하는 참고 자료이며, 구현 계약을 직접 바꾸지 않는다.
 
+처음 읽는 사람은 이 문서를 먼저 읽지 않아도 된다. 구현 기준은 API/Architecture/Implementation 문서에 있고, 이 문서는 왜 그런 계약을 택했는지 확인할 때 사용한다.
+
 목적은 OpenRTB 전체를 구현하는 것이 아니다. IAB Tech Lab OpenRTB 2.6과 대형 구현체 문서를 기준으로, 현재 프로젝트의 SSP hot path에 필요한 메시지 계약만 좁힌다.
 
 ## Sources
@@ -48,16 +50,16 @@ IAB implementation notes는 no-bid 표현으로 HTTP 204, 빈 JSON object, 빈 `
 
 | From | Message | To | Meaning |
 |---|---|---|---|
-| HTTP Adapter | `ProviderSlotRequest` | Slot Ingress | provider-facing slot request |
+| Web Adapter | `ProviderSlotRequest` | Slot Ingress | provider-facing slot request |
 | Slot Ingress | `AcceptedSlotRequest(AuctionCommand)` | Auction Execution | auction is executable |
-| Slot Ingress | `RejectedSlotRequest` | HTTP Adapter | request rejected before auction execution |
+| Slot Ingress | `RejectedSlotRequest` | Web Adapter | request rejected before auction execution |
 | Auction Execution | `BidRequest + Deadline` | DSP Gateway | call all configured DSP endpoints |
 | DSP Gateway | `List<DspCallResult>` | Auction Execution | observed DSP call outcomes |
 | Auction Execution | `AuctionRequest + DspCallResult[] + Deadline` | Bid Judgment | classify and validate DSP outcomes |
 | Bid Judgment | `JudgementResult` | Auction Execution | valid candidates and outcome counts |
 | Auction Execution | `List<ValidBidCandidate>` | Winner Decision | select winner under auction rule |
 | Winner Decision | `AuctionOutcome` | Auction Execution | winner or no-winner |
-| Auction Execution | `AuctionResult` | HTTP Adapter | project-level response |
+| Auction Execution | `AuctionResult` | Web Adapter | project-level response |
 
 ## Message Invariants
 
@@ -160,4 +162,4 @@ These notes explain where the current code still needs alignment with the messag
 
 Use this research note only as supporting context when reviewing or evolving the SSP message contracts in `api-interface-specification.md`.
 
-Do not add new implementation scope directly from this note. Promote an interface decision to `api-interface-specification.md`, an implementation decision to `implementation-technical-specification.md`, or an architectural decision to an ADR first. Then update code only where the current implementation violates the chosen contract.
+Do not add new implementation scope directly from this note. Promote an interface decision to `api-interface-specification.md`, an implementation decision to `implementation-technical-specification.md`, or an architectural decision to an ADR first. Then update code only where the baseline code violates the chosen contract.

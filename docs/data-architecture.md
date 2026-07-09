@@ -1,345 +1,116 @@
 # RTB Data Architecture
 
-## 1. Purpose
+이 문서는 RTB 경매 데이터가 시스템 안에서 어떤 상태로 존재하는지 정의한다. DB 스키마나 제품 선택보다 먼저 source of truth, serving copy, transient state, business event를 구분한다.
 
-이 문서는 RTB 경매와 입찰에서 등장하는 데이터가 시스템 안에서 어떤 상태로 존재해야 하는지 정의한다.
+API 필드는 `api-interface-specification.md`, runtime 구조는 `architecture-description.md`, 구현 컴포넌트는 `implementation-technical-specification.md`를 기준으로 한다.
 
-목적은 필드나 DB 스키마를 먼저 정하는 것이 아니다. 어떤 데이터가 진실원(source of truth)인지, 어떤 데이터가 파생 상태(derived state)인지, 어떤 데이터가 일시 입력(transient input), 비즈니스 이벤트(event), 관측 데이터(observability data)인지 먼저 구분한다.
+## 1. Data Categories
 
-저장소 제품 선택, SSP/DSP store ownership, budget reservation, event output, 장애 복구, 정합성 모델은 이 분류와 불변조건을 바탕으로 별도 결정한다.
-
-이 문서는 현재 구현 범위를 확장하지 않는다. 현재 구현은 Provider Slot Request를 받아 SSP가 OpenRTB BidRequest를 생성하고, BidResponse 수집과 낙찰 판단까지 이어지는 hot path에 집중한다. 과금, 정산, 리포팅, 광고 운영 백오피스는 여전히 범위 밖이다.
-
-API 필드와 endpoint 계약은 `api-interface-specification.md`, 시스템 view와 런타임 구조는 `architecture-description.md`, 구현 컴포넌트와 테스트 전략은 `implementation-technical-specification.md`를 기준으로 한다.
-
-## 2. Design Lens
-
-이 문서는 Martin Kleppmann의 데이터 시스템 관점에 가깝게, 저장소를 제품 단위가 아니라 데이터의 의미와 흐름 단위로 본다.
-
-핵심 질문은 다음 순서로 다룬다.
-
-1. 어떤 데이터가 장기적으로 보존되어야 하는 진실원인가?
-2. 어떤 데이터가 진실원에서 만들어진 serving copy 또는 index인가?
-3. 어떤 데이터가 요청 처리 중에만 존재하는 transient input 또는 transient decision인가?
-4. 어떤 비즈니스 사실을 append-only event로 남길 가치가 있는가?
-5. 어떤 데이터가 정확성보다 빠른 조회, 짧은 불일치 허용, 재구성 가능성을 우선하는가?
-6. 어떤 데이터가 장애 후 반드시 복구되어야 하며, 어떤 데이터는 재생성해도 되는가?
-
-이 순서를 거치기 전에는 PostgreSQL, Redis/Valkey, Kafka/Redpanda, Kinesis, ClickHouse 같은 제품을 결정하지 않는다.
-
-## 3. State Categories
-
-| Category | Meaning | Typical storage implication |
+| Category | Meaning | Storage implication |
 |---|---|---|
-| Source of truth | 시스템이 기준으로 삼는 원본 상태 | 영속 DB, 관리 가능한 기준 저장소, 감사 가능한 변경 이력 |
-| Derived serving state | 원본에서 만든 hot-path 조회 상태 | process memory, Redis/Valkey, managed memory store, materialized view |
-| Transient input | 요청 처리 중 들어왔다가 사라지는 입력 | 메모리 객체, 필요 시 샘플링 또는 축약 이벤트 |
-| Transient decision | 요청 처리 중 계산되는 중간 판단 | 메모리 객체, 필요 시 debug sample |
-| Observed external fact | 외부 시스템이 반환하거나 발생시킨 사실 | 검증 전 관찰 결과, audit/event 후보 |
-| Business event | 시간이 지나도 의미가 있는 비즈니스 사실 | append-only log, outbox, stream, event store |
-| Ledger state | 돈, 차감, 정산의 기준 상태 | 강한 정합성 저장소, 원장, idempotency, reconciliation |
-| Observability data | 시스템 상태와 장애 원인 설명 자료 | metrics, logs, traces backend |
+| Source of truth | 시스템이 기준으로 삼는 원본 상태 | 영속 저장, 변경 이력, 운영 관리 |
+| Serving copy | source of truth에서 만든 hot path 조회 상태 | process memory, Redis/Valkey, materialized view 후보 |
+| Transient input | 요청 처리 중 들어왔다가 사라지는 입력 | 메모리 처리, 필요 시 샘플링 |
+| Transient decision | 요청 처리 중 계산되는 중간 판단 | 메모리 처리, 필요 시 debug log |
+| External observation | DSP 응답처럼 외부 호출에서 관찰한 결과 | 검증 전 관찰값 |
+| Business event | 시간이 지나도 의미가 있는 비즈니스 사실 | append-only log, outbox, stream 후보 |
+| Ledger state | 돈, 차감, 정산 기준 상태 | 강한 정합성, idempotency, reconciliation |
+| Observability data | 시스템 상태와 원인 분석 자료 | metrics, logs, traces |
 
-## 4. Project Boundary
+`External observation`은 곧바로 비즈니스 진실이 아니다. 예를 들어 BidResponse는 관찰값이고, Bid Judgment를 통과해야 winner candidate가 된다.
 
-현재 구현에서 직접 다루는 데이터는 다음이다.
+## 2. Project Data Boundary
 
-| Data | Current handling | State category |
+현재 hot path에서 직접 다루는 데이터:
+
+| Data | Category | Meaning |
 |---|---|---|
-| `ProviderSlotRequest` | provider-facing 요청으로 수신 | Transient input |
-| `InventoryPlacement` | 현재는 in-memory catalog에 로드 | Source of truth 후보의 serving copy |
-| SSP auction policy | first-price, single-imp, USD, banner/simple video를 코드/문서 규칙으로 적용 | Source rule / serving policy |
-| OpenRTB `BidRequest` | SSP가 ProviderSlotRequest와 InventoryPlacement에서 생성 | Derived message |
-| `AuctionCommand` | Slot Ingress가 Auction Execution에 넘기는 실행 컨텍스트 | Immutable execution context |
-| DSP `CampaignSnapshot` | DSP 시작 시 sample data로 구성 | Source of truth 후보의 serving copy |
-| DSP campaign index/repository | CampaignSnapshot을 hot path에서 조회 | Derived serving state |
-| Bid decision data | DSP 내부에서 bid/no-bid 판단 중 생성 | Transient decision |
-| `DspCallResult` | DSP 호출 결과 관찰값 | Observed external fact |
-| `BidResponse` | DSP가 반환한 OpenRTB 응답 | Observed external fact |
-| `AuctionResult` | SSP가 검증/판정 후 반환 | Result message / event candidate |
-| Observability data | metrics/logs/traces로 수집 | Observability data |
+| `ProviderSlotRequest` | Transient input | 광고 슬롯 요청을 표현하는 provider-facing 입력 |
+| `InventoryPlacement` | Serving copy | SSP가 provider/placement를 해석하기 위해 읽는 공급 지면 상태 |
+| OpenRTB `BidRequest` | Derived message | SSP가 DSP에 보내는 입찰 요청 |
+| `AuctionCommand` | Transient decision context | 경매 실행에 필요한 불변 컨텍스트 |
+| `CampaignSnapshot` | Serving copy | DSP가 bid/no-bid 판단에 사용하는 캠페인 상태 |
+| `DspCallResult` | External observation | DSP 호출 결과 관찰값 |
+| `BidResponse` | External observation | DSP가 반환한 OpenRTB 응답 |
+| `AuctionResult` | Result message | SSP가 provider-facing 경로로 반환하는 경매 결과 |
+| Metrics/logs/traces | Observability data | 성능과 장애 원인 설명 자료 |
 
-현재 구현에서 직접 다루지 않는 데이터는 다음이다.
+현재 hot path에서 직접 다루지 않는 데이터:
 
 | Data | Reason |
 |---|---|
-| Money state | 계좌, 예산, reservation, 차감은 제품급 money flow 설계가 먼저 필요하다 |
-| Real-time control state | pacing, frequency cap, dynamic routing은 현재 hot path 검증 범위 밖이다 |
-| Transaction event | win/impression/billing 후속 흐름이 현재 범위 밖이다 |
-| Ledger and settlement data | 과금/정산 시스템은 현재 목표가 아니다 |
-| Analytics and reporting data | 리포팅 저장소와 집계 파이프라인은 별도 제품 영역이다 |
+| Money / budget / ledger | strong consistency와 reconciliation 설계가 먼저 필요하다. |
+| Win/impression/billing event | event identity와 duplicate handling이 먼저 필요하다. |
+| Analytics/reporting | hot path 결과에서 파생되는 별도 제품 영역이다. |
+| Real-time control state | pacing, frequency cap, routing은 현재 범위 밖이다. |
 
-## 5. Data State Map
+## 3. Source Of Truth And Serving Copy
 
-이 장은 각 데이터의 비즈니스 의미와 상태 성격을 정리한다. API 필드는 `api-interface-specification.md`, 구현 컴포넌트는 `implementation-technical-specification.md`에서 다룬다.
+핵심 원칙은 원본과 hot path 조회 상태를 분리하는 것이다.
 
-### 5.1 Auction Opportunity
-
-광고 노출 기회와 경매 입력을 표현한다. 현재 provider-facing 경로에서는 `ProviderSlotRequest`, SSP inventory placement, SSP가 생성한 OpenRTB `BidRequest`가 함께 이 흐름을 이룬다.
-
-`ProviderSlotRequest`는 광고 슬롯이 열렸다는 사실과 provider/placement, 광고 타입, 슬롯 제약을 표현한다. 요청 자체는 장기 상태의 진실원이 아니다. SSP가 이를 inventory와 조합해 생성한 `BidRequest`는 DSP-facing 파생 메시지다.
-
-| Aspect | Decision |
-|---|---|
-| Frequency | 경매 요청마다 매우 자주 생성된다 |
-| Lifetime | 대부분 요청 처리 중에만 필요하다 |
-| Correctness | 요청 검증과 inventory 매칭은 정확해야 한다 |
-| Hot path | SSP와 DSP 양쪽 hot path에서 직접 사용된다 |
-| Storage | 기본은 메모리 처리다. 사후 분석은 샘플링 또는 축약 이벤트가 적합하다 |
-
-### 5.2 Supply-Side Inventory And Policy
-
-SSP가 provider/placement를 해석하고 경매를 어떻게 열지 결정하는 기준 데이터다. inventory placement, floor, currency, media constraints, default timeout, auction policy가 여기에 속한다.
-
-제품급 구조에서는 inventory 원본과 hot-path serving catalog를 분리한다. 현재 in-memory catalog는 fixture가 아니라 향후 외부 원본 저장소에서 로드될 serving copy의 최소 구현으로 본다.
-
-| Aspect | Decision |
-|---|---|
-| Frequency | 요청보다 훨씬 낮은 빈도로 변경된다 |
-| Lifetime | 운영 설정으로 장기 보존 대상이다 |
-| Correctness | 잘못 적용되면 경매 결과와 수익 판단에 영향을 준다 |
-| Hot path | 경매 시작과 BidRequest 생성에 필요하다 |
-| Storage | 원본은 영속 저장, hot path는 serving copy가 적합하다 |
-
-### 5.3 Demand-Side Campaign And Creative State
-
-DSP가 입찰 여부와 응답을 판단하기 위해 사용하는 기준 데이터다. 캠페인 활성 여부, 지원 광고 타입, 타겟팅 조건, 입찰 정책, creative 참조 정보가 포함된다.
-
-제품급 구조에서는 Campaign Data Store가 원본이고, DSP hot path는 Campaign Snapshot과 내부 index/repository를 읽는다. BidRequest 처리 중 Campaign Data Store를 동기 조회하지 않는 것을 기본 전제로 둔다.
-
-| Aspect | Decision |
-|---|---|
-| Frequency | 운영 설정 데이터로 요청보다 낮은 빈도로 변경된다 |
-| Lifetime | 재시작 후에도 복구되어야 한다 |
-| Correctness | 잘못 적용되면 잘못된 bid/no-bid 또는 invalid bid가 발생한다 |
-| Hot path | DSP bid decision과 BidResponse 생성에 필요하다 |
-| Storage | 원본 저장소와 DSP serving snapshot/index 분리가 적합하다 |
-
-### 5.4 Bid Decision State
-
-DSP가 특정 BidRequest에 대해 bid 또는 no-bid를 결정하는 과정에서 생기는 파생 데이터다. 후보 캠페인, 매칭 결과, no-bid 사유, 계산된 입찰가, 선택된 creative 같은 중간 판단이 여기에 속한다.
-
-| Aspect | Decision |
-|---|---|
-| Frequency | BidRequest와 같은 수준으로 매우 높다 |
-| Lifetime | 대부분 요청 처리 중에만 필요하다 |
-| Correctness | 현재 요청의 응답 생성에는 정확해야 한다 |
-| Hot path | DSP hot path 내부 계산 결과다 |
-| Storage | 기본은 저장하지 않는다. 디버깅/분석은 샘플링 또는 조건부 이벤트가 적합하다 |
-
-### 5.5 Bid Response And Auction Result
-
-DSP가 반환한 `BidResponse`와 SSP가 결정한 winner/no-winner 결과다. 입찰 가격, DSP별 결과 분류, 낙찰자, 낙찰가, invalid/timeout/late bid 판정이 여기에 속한다.
-
-`BidResponse`는 외부 DSP가 반환한 observed fact이며 곧바로 winner 후보가 아니다. SSP의 Bid Judgment를 통과한 뒤에만 valid candidate가 된다. `AuctionResult`는 현재 프로젝트 응답이지만 제품급에서는 event output 또는 audit store 후보가 될 수 있다.
-
-| Aspect | Decision |
-|---|---|
-| Frequency | 경매 요청마다 발생한다 |
-| Lifetime | hot path 결과로 즉시 필요하며, 제품급에서는 사후 설명과 감사 목적의 보존 가치가 있다 |
-| Correctness | 경매 결과이므로 요청 단위 판정은 정확해야 한다 |
-| Hot path | SSP 낙찰 판단과 응답 생성에 직접 필요하다 |
-| Storage | 현재는 메모리 처리와 응답 반환이 충분하다. 제품급에서는 append-only event 후보가 된다 |
-
-### 5.6 Money, Transaction, Ledger
-
-광고주 계좌, 캠페인 예산, reservation, 실제 차감, win/impression/billing event, 정산 원장 같은 데이터다.
-
-현재 프로젝트 범위에는 포함하지 않는다. 다만 제품급 확장에서는 이 영역을 단순 캐시나 observability로 대체하면 안 된다. money state는 idempotency, 중복 차감 방지, 음수 잔액 방지, reconciliation, 감사 가능성을 요구한다.
-
-| Aspect | Decision |
-|---|---|
-| Frequency | 입찰, 낙찰, 노출, 정산 이벤트에 따라 매우 자주 바뀔 수 있다 |
-| Lifetime | 장기 보존과 복구가 필요하다 |
-| Correctness | 가장 강한 정확성과 추적 가능성이 필요하다 |
-| Hot path | 경매 제한 시간 안에 직접 넣을지는 별도 결정이 필요하다 |
-| Storage | 원장, 영속 DB, append-only event, idempotency store를 별도 검토해야 한다 |
-
-### 5.7 Real-Time Control, Analytics, Observability
-
-pacing, frequency cap, rate limit, DSP health, 최근 win rate 같은 real-time control state는 빠른 보정과 bounded inconsistency가 중요한 경우가 많다. Analytics/reporting data는 원천 이벤트에서 만들어지는 집계 데이터다. Observability data는 metrics, logs, traces처럼 시스템 상태와 장애 원인을 설명하는 자료다.
-
-이 셋은 서로 목적이 다르다. 특히 observability data는 비즈니스 원장이나 정산 기준 데이터의 대체물이 아니다.
-
-| Data | Storage implication |
-|---|---|
-| Real-time control state | 인메모리 counter, Redis/Valkey, local cache, windowed aggregate 후보 |
-| Analytics/reporting data | OLAP 저장소, batch/stream aggregate 후보 |
-| Observability data | metrics backend, log store, trace backend |
-
-## 6. Data Invariants
-
-이 장의 불변조건은 필드 스키마가 아니라 데이터 의미와 저장/처리 책임에 대한 제약이다.
-
-| Data | Invariant |
-|---|---|
-| `ProviderSlotRequest` | provider-facing 입력이며 OpenRTB 표준 객체가 아니다. 요청 자체는 장기 비즈니스 상태의 진실원이 아니라 경매 실행을 시작하는 transient input이다. |
-| `InventoryPlacement` | provider/placement 조합은 SSP가 해석하는 공급 지면 기준 데이터다. 제품급 구조에서 원본은 외부 inventory store에 두고, hot path catalog는 그 원본에서 만든 serving copy로 본다. |
-| SSP serving catalog | 입찰 제한 시간 안에서 provider/placement 조회를 제공해야 하며, 매 요청마다 외부 기준 저장소를 동기 조회하지 않는다. 장애 또는 재시작 후에는 inventory 원본에서 다시 구성 가능해야 한다. |
-| Supply-side auction policy | 경매 방식, 통화, floor, 지원 매체 범위는 SSP가 BidRequest를 만들고 낙찰을 판단할 때 일관되게 적용되어야 한다. 현재 기본 정책은 first-price, single impression, USD, banner/simple video다. |
-| OpenRTB `BidRequest` | SSP가 생성한 DSP-facing 파생 메시지다. `BidRequest.id`는 내부 `AuctionRequest.requestId`와 같아야 하고, 단일 `Imp`만 포함하며, `Imp.id`는 내부 `AuctionRequest.impId`와 같아야 한다. |
-| `AuctionCommand` | Slot Ingress가 생성하는 첫 실행 가능 메시지다. 생성 이후 request id, impression id, media type, floor, currency, receivedAt의 의미가 auction execution 동안 바뀌면 안 된다. |
-| DSP `CampaignSnapshot` | DSP hot path가 읽는 캠페인 상태는 기준 데이터의 serving copy다. 현재 구현에서는 시작 시점에 고정되며, BidRequest 처리 중 Campaign Data Store를 동기 조회하지 않는다. |
-| DSP campaign index/repository | Campaign Snapshot에서 만든 파생 조회 구조다. index가 바뀌어도 같은 snapshot과 같은 요청에 대해 후보 캠페인의 의미가 달라지면 안 된다. |
-| `DspCallResult` | DSP 호출 관찰 결과이며 유효 입찰 후보가 아니다. timeout, error, late bid, no-bid, bid-received 분류는 winner selection 전에 보존되어야 한다. |
-| `BidResponse` | 외부 DSP가 반환한 observed fact이며, winner 후보가 되기 전 Bid Judgment를 통과해야 한다. request id, impression id, price, currency, media type, markup 조건이 원 요청과 맞지 않으면 유효 후보가 아니다. |
-| `AuctionResult` | SSP가 산출한 프로젝트 응답이다. winner가 있으면 반드시 Bid Judgment를 통과한 후보에서 나와야 하고, no-winner는 정상 결과이며 시스템 오류로 취급하지 않는다. |
-| Money state | 광고주 계좌, 예산, reservation, 차감 상태는 단순 캐시가 아니다. 제품급 구조에서는 중복 차감 방지, 음수 잔액 방지, 감사 가능성이 필요하다. |
-| Transaction event | win, impression, billing, settlement 같은 비즈니스 사실은 제품급 구조에서 append-only event 후보로 본다. 기록된 사실은 수정보다 보정 이벤트로 처리하는 모델을 우선 검토한다. |
-| Observability data | metrics, logs, traces는 시스템 진단 데이터이며 비즈니스 원장이나 정산 기준 데이터의 대체물이 아니다. |
-
-### 6.1 Failure-Derived Invariants
-
-이 불변조건은 Architecture의 실패 시나리오에서 도출한 것이다. 세부 구현 규칙이 아니라, 이후 상태 전이와 테스트로 내려갈 때 깨지면 안 되는 의미 규칙이다.
-
-| Failure surface | Invariant |
-|---|---|
-| Request failure | 경매를 시작할 수 없는 요청은 DSP Gateway까지 전달되면 안 된다. |
-| Request failure | `AcceptedSlotRequest`만 `AuctionCommand`를 가질 수 있다. |
-| Timing failure | deadline 이후 도착한 bid는 가격과 무관하게 winner 후보가 될 수 없다. |
-| DSP response failure | no-bid, timeout, late bid, invalid bid는 서로 다른 의미로 분류되어야 한다. |
-| Competition | Winner Selector는 Bid Judgment를 통과한 valid candidate만 입력으로 받아야 한다. |
-| Competition | 같은 입력과 같은 관찰 결과에 대해 winner decision은 재현 가능해야 한다. |
-| No winner | valid candidate가 없으면 no-winner는 정상 경매 결과이며 시스템 장애가 아니다. |
-| Serving state failure | Inventory serving catalog가 준비되지 않은 상태에서는 placement를 추측해서 경매를 시작하지 않는다. |
-| Serving state failure | Campaign Snapshot이 준비되지 않은 DSP는 정상 bid 판단을 수행한 것으로 취급하지 않는다. |
-| Duplicate / retry | 현재 hot path는 provider slot request retry에 대한 end-to-end idempotency를 보장하지 않는다. 이 보장은 event output 또는 money flow 도입 시 별도 설계 대상이다. |
-| Event boundary | AuctionResult 이후의 business event가 필요해지면 event identity와 duplicate handling이 먼저 정의되어야 한다. |
-| Observability | metrics/logs/traces의 존재 여부는 AuctionResult, billing, ledger의 진실성을 결정하지 않는다. |
-
-## 7. Critical Invariants
-
-다음 불변조건은 후속 설계에 큰 영향을 주며, 나중에 바꾸면 저장소 경계, 장애 복구, 테스트 전략, 성능 가정까지 다시 손봐야 하는 비용이 크다.
-
-| Critical invariant | Why it is expensive to change |
-|---|---|
-| SSP inventory 원본과 hot-path serving catalog는 분리한다. | catalog를 원본으로 취급하면 persistence, migration, operator workflow, 장애 복구 모델이 모두 바뀐다. 반대로 원본/파생 분리를 전제로 하면 Redis/Valkey/local memory는 serving layer 후보로 비교할 수 있다. |
-| DSP campaign 원본과 Campaign Snapshot/index는 분리한다. | BidRequest마다 campaign store를 동기 조회하는 구조로 바꾸면 latency budget, DSP scaling model, 장애 전파 범위가 바뀐다. snapshot을 원본으로 취급하면 캠페인 변경, 재시작 복구, 다중 DSP 일관성 모델이 흔들린다. |
-| BidRequest와 AuctionRequest의 id/imp/media/floor/currency 정합성은 Slot Ingress에서 보장한다. | 이 정합성을 뒤 컴포넌트가 매번 추론하게 만들면 Auction Execution, Bid Judgment, Winner Decision이 모두 방어적이고 복잡해진다. |
-| `AuctionCommand`는 불변 실행 컨텍스트다. | auction execution 중 요청 의미가 변할 수 있으면 deadline 계산, bid validation, result 설명 가능성, 재현 테스트가 모두 어려워진다. |
-| DSP 호출 결과와 유효 bid candidate는 분리한다. | `DspCallResult`를 곧바로 후보로 보면 timeout, late, malformed, no-bid 분류가 winner selection에 섞이고 장애 분석과 판정 정확성이 낮아진다. |
-| Winner는 반드시 Bid Judgment를 통과한 후보에서만 선택한다. | 이 조건이 깨지면 경매 정확성 자체가 흔들리고, 이후 과금/정산/event output을 신뢰할 수 없다. |
-| Money state는 observability나 cache로 대체하지 않는다. | 예산/계좌를 캐시나 메트릭으로 처리하면 중복 차감, 음수 잔액, 정산 불일치가 발생한다. 나중에 원장 모델로 전환하는 비용이 매우 크다. |
-| 비즈니스 transaction event와 metrics/logs는 분리한다. | observability 데이터를 과금/정산 근거로 사용하기 시작하면 retention, sampling, cardinality, privacy, 재처리 전략을 모두 바꿔야 한다. |
-| 현재 hot path는 외부 저장소 동기 의존을 기본으로 두지 않는다. | 나중에 동기 DB/Redis 조회를 hot path에 넣으면 p95/p99, timeout 전파, backpressure, 장애 격리 전략이 바뀐다. 필요한 경우 별도 ADR과 성능 검증이 필요하다. |
-
-## 8. State Transitions
-
-이 장은 현재 hot path에서 필요한 상태 전이만 다룬다. money, ledger, billing, win notice, impression 같은 후속 흐름의 상태 전이는 아직 정의하지 않는다.
-
-### 8.1 Auction Lifecycle
-
-| From | Trigger | To | Meaning |
-|---|---|---|---|
-| Provider slot input | Slot Ingress accepts request | Auction command accepted | 경매 실행 가능한 내부 컨텍스트가 만들어졌다. |
-| Provider slot input | Slot Ingress rejects request | Request rejected | DSP 호출 없이 요청 실패 결과로 끝난다. |
-| Auction command accepted | Auction Execution starts DSP calls | Waiting for DSP results | deadline 안에서 DSP 응답을 수집한다. |
-| Waiting for DSP results | Deadline reached or all calls observed | Judging bids | 수집된 DSP 호출 결과를 유효 후보와 비후보로 분류한다. |
-| Judging bids | Valid candidate exists | Selecting winner | 경매 규칙으로 winner를 고른다. |
-| Judging bids | No valid candidate exists | No winner result | 정상적인 no-winner 결과로 끝난다. |
-| Selecting winner | Winner selected | Winner result | 유효 후보 중 하나가 낙찰 결과가 된다. |
-
-### 8.2 DSP Result Classification
-
-| Observed state | Transition rule | Candidate status |
+| Domain | Source of truth candidate | Serving copy |
 |---|---|---|
-| No response before deadline | classify as `TIMEOUT` | Not a candidate |
-| Response after deadline | classify as `LATE_BID` | Not a candidate |
-| Explicit no-bid | classify as `NO_BID` | Not a candidate |
-| Transport or decode failure | classify as `ERROR` | Not a candidate |
-| BidResponse received | send to Bid Judgment | Not a candidate yet |
-| BidResponse fails validation | classify as `INVALID_BID` | Not a candidate |
-| BidResponse passes validation | create valid candidate | Candidate |
+| Supply-side inventory | Inventory Store | Inventory Catalog |
+| Demand-side campaign | Campaign Data Store | Campaign Snapshot / Index |
 
-### 8.3 Winner Decision
+Serving copy는 빠른 조회를 위한 상태이지 원본이 아니다. 재시작이나 장애 후에는 source of truth에서 다시 만들 수 있어야 한다.
 
-| Input | Transition | Result |
-|---|---|---|
-| Empty valid candidate list | skip winner selection | `NO_WINNER` |
-| One valid candidate | select candidate | `WINNER` |
-| Multiple valid candidates | apply first-price winner rule | `WINNER` |
-| Multiple valid candidates with same price | apply deterministic tie-break | `WINNER` |
+현재 재현 가능한 initial data나 in-memory catalog는 임시 가짜 데이터로 취급하지 않는다. 향후 외부 source of truth에서 로드될 serving copy의 최소 구현으로 본다.
 
-### 8.4 Serving State Lifecycle
+## 4. Core Invariants
 
-| State | Transition | Meaning |
-|---|---|---|
-| Source data exists | load serving copy | SSP/DSP hot path can use local serving state. |
-| Serving copy ready | handle auction request | hot path does not synchronously read source store. |
-| Serving copy missing | reject or disable affected path | system must not guess placement or campaign state. |
-| Process restarted | rebuild serving copy from source | derived serving state must be reconstructable. |
-| Source data changed | refresh policy applies | freshness and cutover policy are future decisions. |
-
-## 9. Consistency Requirements
-
-이 장은 저장소 제품을 고르기 전, 데이터별로 필요한 정합성 수준을 정리한다. 여기서 말하는 정합성은 "항상 같은 DB를 써야 한다"는 뜻이 아니라, 어떤 불일치를 허용할 수 있고 어떤 불일치는 시스템 의미를 깨뜨리는지를 구분하는 기준이다.
-
-### 9.1 Consistency Classes
-
-| Class | Meaning | Suitable data |
-|---|---|---|
-| Strong business consistency | 잘못되면 돈, 권리, 감사 가능성이 깨지는 상태다. 중복 처리, 순서, 원자성, 복구가 중요하다. | Money state, ledger, billing, settlement |
-| Request-local consistency | 단일 경매 요청 안에서는 모순이 없어야 하지만, 요청이 끝나면 재사용하지 않는 상태다. | `AuctionCommand`, bid validation result, winner decision |
-| Rebuildable serving consistency | 원본과 잠깐 다를 수 있지만, 원본에서 다시 만들 수 있어야 한다. | SSP inventory catalog, DSP Campaign Snapshot/index |
-| Append-only fact consistency | 한번 발생한 비즈니스 사실을 나중에 수정하기보다 보정 이벤트로 설명한다. | win, impression, billing event 후보 |
-| Best-effort diagnostic consistency | 누락이나 지연이 있을 수 있으며, 비즈니스 진실원으로 쓰지 않는다. | metrics, logs, traces |
-
-### 9.2 Current Hot Path Requirements
-
-| Area | Requirement |
+| Invariant | Why it matters |
 |---|---|
-| Slot Ingress | 같은 `ProviderSlotRequest`에서 만든 `AuctionCommand`는 request id, impression id, media type, floor, currency가 서로 모순되면 안 된다. |
-| Auction Execution | deadline 안에서 관찰한 DSP 결과만 현재 경매의 판단 재료로 쓴다. deadline 이후 결과는 가격과 무관하게 후보가 아니다. |
-| Bid Judgment | `BidResponse`는 관찰값일 뿐이며, 원 요청과 맞는지 검증되기 전에는 winner candidate가 아니다. |
-| Winner Decision | 같은 valid candidate set과 같은 tie-break rule에 대해 같은 winner/no-winner 결과를 내야 한다. |
-| Serving State | inventory catalog와 campaign snapshot은 hot path에서 빠르게 읽히는 serving copy다. 준비되지 않았으면 추측하지 않고 거절하거나 해당 DSP를 제외한다. |
-| Observability | metric/log/trace 기록 실패가 경매 결과를 바꾸면 안 된다. |
+| 경매를 시작할 수 없는 요청은 DSP Gateway까지 전달되지 않는다. | 불필요한 외부 호출과 모호한 실패를 막는다. |
+| `AuctionCommand`는 생성 이후 경매 종료까지 의미가 바뀌지 않는다. | deadline, validation, result explanation이 안정된다. |
+| OpenRTB BidRequest와 내부 AuctionRequest의 id/imp/media/floor/currency는 일치해야 한다. | 뒤 컴포넌트가 요청 의미를 다시 추론하지 않게 한다. |
+| `DspCallResult`와 valid bid candidate는 분리한다. | timeout, no-bid, invalid bid가 winner selection에 섞이지 않는다. |
+| Winner는 반드시 Bid Judgment를 통과한 candidate에서만 나온다. | 경매 정확성과 이후 event/ledger 신뢰성을 지킨다. |
+| `NO_WINNER`는 정상 경매 결과일 수 있다. | 장애와 비낙찰을 구분한다. |
+| Observability data는 business event나 ledger의 대체물이 아니다. | metrics 누락이나 샘플링이 비즈니스 진실을 바꾸면 안 된다. |
 
-### 9.3 Deferred Consistency Questions
+## 5. State Transitions
 
-다음 질문은 현재 구현 범위 밖이지만, 저장소 선택 전에 반드시 다시 다뤄야 한다.
+### Auction Lifecycle
 
-| Deferred question | Why it matters |
+| From | To | Rule |
+|---|---|---|
+| Provider slot input | Request rejected | Slot Ingress가 요청을 경매 불가로 판단한다. |
+| Provider slot input | Auction command accepted | 요청과 inventory가 경매 실행 가능 상태로 정규화된다. |
+| Auction command accepted | Waiting for DSP results | Auction Flow가 deadline을 정하고 DSP 호출을 시작한다. |
+| Waiting for DSP results | Judging bids | deadline 도달 또는 모든 결과 관찰 후 검증한다. |
+| Judging bids | Winner result | valid candidate가 있고 winner rule이 적용된다. |
+| Judging bids | No-winner result | valid candidate가 없다. |
+
+### DSP Result Classification
+
+| Observation | Classification | Candidate? |
+|---|---|---|
+| No response before deadline | `TIMEOUT` | No |
+| Response after deadline | `LATE_BID` | No |
+| Explicit no-bid | `NO_BID` | No |
+| Transport or decode failure | `ERROR` | No |
+| BidResponse fails validation | `INVALID_BID` | No |
+| BidResponse passes validation | valid candidate | Yes |
+
+## 6. Consistency Requirements
+
+| Consistency class | Data |
 |---|---|
-| inventory/campaign serving copy가 원본보다 얼마나 오래되어도 되는가? | stale data 허용 범위가 refresh 방식, 캐시 무효화, 장애 시 fallback을 결정한다. |
-| provider slot request retry에 idempotency key를 둘 것인가? | event output이나 money flow가 붙으면 같은 요청을 두 번 처리하는 비용이 커진다. |
-| win/impression/billing event를 어떤 identity로 deduplicate할 것인가? | append-only event는 중복 기록과 재처리 전략 없이는 원장과 리포팅을 오염시킨다. |
-| budget reservation을 bid 시점에 할 것인가, win 시점에 할 것인가? | latency, overspend risk, ledger model, 보상 트랜잭션 방식이 달라진다. |
-| SSP store와 DSP store의 업데이트 전파 지연을 어느 정도 허용할 것인가? | 서로 다른 store 인스턴스를 전제로 할 때 cross-component consistency 기대치를 정해야 한다. |
+| Request-local consistency | `AuctionCommand`, Bid Judgment result, Winner Decision |
+| Rebuildable serving consistency | Inventory Catalog, Campaign Snapshot / Index |
+| Append-only fact consistency | future win/impression/billing events |
+| Strong business consistency | future budget, ledger, settlement |
+| Best-effort diagnostic consistency | metrics, logs, traces |
 
-현재 단계의 결론은 이렇다. hot path 내부는 request-local consistency가 필요하고, inventory/campaign serving state는 rebuildable serving consistency가 필요하다. money/ledger는 strong business consistency가 필요하지만 아직 구현하지 않는다. observability는 best-effort diagnostic consistency로만 본다.
+현재 hot path는 request-local consistency가 핵심이다. money/ledger는 strong business consistency가 필요하므로 캐시나 metrics로 대체하지 않는다.
 
-## 10. Research Boundary
+## 7. Deferred Data Decisions
 
-저장소 기술 리서치는 다음 질문으로 좁힌다.
-
-1. 어떤 데이터가 진실의 원본이어야 하는가?
-2. 어떤 데이터가 hot path에서 인메모리 serving copy로 제공되어야 하는가?
-3. 어떤 데이터가 append-only event로 남아야 장애 복구와 재처리가 가능한가?
-4. 어떤 데이터는 전체 저장이 아니라 샘플링 또는 집계만으로 충분한가?
-5. 어떤 데이터는 정확성이 최우선이고, 어떤 데이터는 bounded inconsistency를 허용할 수 있는가?
-
-이 문서는 저장소 제품을 결정하지 않는다. PostgreSQL, Redis, Valkey, MemoryDB, Kafka, Kinesis, ClickHouse 같은 제품 비교는 데이터 소유권과 정확도 등급을 확정한 뒤 진행한다.
-
-## 11. Decisions And Non-Decisions
-
-확정:
-
-- RTB 데이터는 단일 저장소 관점이 아니라 데이터 성질별로 분리해서 판단한다.
-- 현재 프로젝트의 hot path는 Auction Opportunity, Campaign Snapshot, Bid Decision, Auction Result 중심이다.
-- SSP inventory와 DSP campaign data는 메모리만을 진실의 원본으로 보지 않는다. 제품급 구조에서는 외부 기준 저장소가 원본이고, hot path는 그 데이터를 로드한 in-memory serving copy를 읽는다.
-- Money State, Transaction Event, Ledger, Analytics는 현재 구현 범위 밖이지만 제품급 확장 논의에서는 별도 데이터 종류로 다룬다.
-- Observability 데이터는 시스템 진단 자료이며 비즈니스 원장으로 사용하지 않는다.
-- Slot Ingress에서 생성된 `AuctionCommand`는 auction execution 동안 의미가 바뀌지 않는 실행 컨텍스트로 본다.
-- 현재 hot path는 request-local consistency를 요구한다.
-- SSP inventory catalog와 DSP Campaign Snapshot/index는 원본에서 재구성 가능한 serving consistency를 요구한다.
-- money/ledger는 strong business consistency가 필요하므로, 캐시나 메트릭으로 대체하지 않는다.
-
-아직 결정하지 않음:
-
-- SSP store와 DSP store의 구체적인 소유 데이터.
-- SSP inventory와 DSP campaign 기준 저장소의 제품 선택.
-- in-memory serving copy를 프로세스 내부 메모리, Redis/Valkey 계열, 또는 managed memory store 중 어디에 둘지.
-- budget reservation을 bid 시점에 수행할지, win 시점에만 차감할지.
-- event output을 현재 코드에 port로 둘지, 문서상의 future boundary로만 둘지.
-- 분석/리포팅 저장소의 도입 여부.
+| Decision | Why deferred |
+|---|---|
+| Inventory/Campaign source DB product | 먼저 source of truth와 serving copy ownership을 확정해야 한다. |
+| Redis/Valkey 사용 여부 | serving copy freshness, rebuild, failure model이 먼저다. |
+| Event output | event identity, duplicate handling, replay policy가 필요하다. |
+| Budget reservation timing | latency와 overspend risk 사이 trade-off가 크다. |
+| Retention/deletion policy | business event와 observability data의 목적이 다르다. |

@@ -21,7 +21,7 @@ RTB의 응답 제한 시간과 불완전한 입찰 응답이라는 제약을 이
 현재 목표 설정 단계에서는 아래 범위까지만 확정한다.
 
 - OpenRTB 2.6의 입찰 요청(`BidRequest`) / 입찰 응답(`BidResponse`) 흐름을 기반으로 한다.
-- SSP와 DSP 사이의 경계 객체는 OpenRTB의 표현 방식을 우선한다. 현재 기본 광고 범위는 `Imp.banner`, `Imp.video`이고, 커스텀 `mediaType` 필드 대신 OpenRTB media 객체의 존재로 광고 타입을 표현한다.
+- SSP와 DSP 사이의 경계 객체는 OpenRTB 표현 방식을 우선한다. 기본 광고 범위는 banner와 simple video다.
 - 시스템의 관심사는 입찰 요청 처리, 입찰 여부와 입찰가 판단, BidResponse 생성/수집, 낙찰자/낙찰가 결정까지이다.
 - 실제 광고 노출, 클릭, 과금, 리포팅은 제외한다.
 - 상세 컴포넌트 구조와 기술 선택은 Implementation Technical Specification 단계에서 결정한다.
