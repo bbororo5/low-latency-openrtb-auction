@@ -504,6 +504,23 @@ SSP 내부 협력 흐름:
 7. `Winner Selector`가 유효한 bid 후보 중 낙찰자와 낙찰가를 결정한다.
 8. SSP는 AuctionResult를 만들어 Provider Slot Client에 반환한다.
 
+SSP 내부 메시지 계약:
+
+| From | Message | To | Contract |
+|---|---|---|---|
+| HTTP Adapter | `ProviderSlotRequest` | Slot Request Handler | provider-facing slot request다. OpenRTB 객체로 취급하지 않는다. |
+| Slot Request Handler | `AcceptedSlotRequest(AuctionCommand)` | Auction Flow | 경매를 실행할 수 있는 불변 실행 컨텍스트가 만들어졌다. |
+| Slot Request Handler | `RejectedSlotRequest` | HTTP Adapter | 경매 시작 전 요청이 거절되었으며 DSP를 호출하지 않는다. |
+| Auction Flow | `BidRequest + Deadline` | DSP Gateway | 지정된 제한 시간 안에서 모든 대상 DSP에 같은 OpenRTB BidRequest를 보낸다. |
+| DSP Gateway | `List<DspCallResult>` | Auction Flow | DSP별 호출 관찰 결과다. 아직 낙찰 후보가 아니다. |
+| Auction Flow | `AuctionRequest + DspCallResult[] + Deadline` | Bid Judge | 원 요청과 deadline 기준으로 DSP 결과를 분류하고 검증한다. |
+| Bid Judge | `JudgementResult` | Auction Flow | 유효 후보와 no-bid/timeout/late/error/invalid 집계를 반환한다. |
+| Auction Flow | `List<ValidBidCandidate>` | Winner Selector | Bid Judge를 통과한 후보만 전달한다. |
+| Winner Selector | `AuctionOutcome` | Auction Flow | winner 또는 no-winner 판단을 반환한다. |
+| Auction Flow | `AuctionResult` | HTTP Adapter | provider-facing 프로젝트 응답이다. OpenRTB 응답 객체가 아니다. |
+
+이 메시지 계약의 핵심은 `DspCallResult`와 `ValidBidCandidate`를 분리하는 것이다. DSP가 무엇인가를 반환했다는 사실과, 그 반환값이 낙찰 후보가 될 수 있다는 판단은 다른 책임이다.
+
 SSP가 판단하는 것:
 
 - 요청이 경매를 시작할 수 있는 형식인지
