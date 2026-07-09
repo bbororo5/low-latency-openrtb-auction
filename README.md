@@ -2,8 +2,8 @@
 
 이 프로젝트는 RTB 광고 도메인을 빌려, 백엔드 성능 엔지니어링에서 중요한 두 가지 문제를 다룹니다.
 
-- **Tail latency와 deadline compliance**: 평균 응답 시간이 아니라 p95/p99 latency와 제한 시간 내 응답률을 기준으로 경매 hot path를 평가합니다. RTB에서는 늦게 도착한 응답이 좋은 가격이어도 사용할 수 없기 때문에, tail latency는 결과 품질과 직접 연결됩니다.
-- **동시성 하에서의 처리량과 포화 지점**: 광고 슬롯 요청은 고빈도로 발생하고, 하나의 요청은 여러 DSP 호출로 fan-out됩니다. 이 프로젝트는 RPS를 높일 때 in-flight 작업, thread, connection, HTTP/JSON 처리, DSP 호출 비용이 어떻게 병목을 만드는지 관측합니다.
+- **제한 시간 안에서의 응답 지연 관리**: 평균 응답 시간이 아니라 p95/p99 latency와 제한 시간 내 응답률을 기준으로 경매 hot path를 평가합니다. RTB에서는 늦게 도착한 응답이 좋은 가격이어도 사용할 수 없기 때문에, tail latency는 결과 품질과 직접 연결됩니다.
+- **고빈도 요청에서의 동시 처리 한계 분석**: 광고 슬롯 요청은 고빈도로 발생하고, 하나의 요청은 여러 DSP 호출로 fan-out됩니다. 이 프로젝트는 RPS를 높일 때 in-flight 작업, thread, connection, HTTP/JSON 처리, DSP 호출 비용이 어떻게 병목을 만드는지 관측합니다.
 
 이 두 문제를 p95/p99 latency, timeout rate, DSP별 응답 분포, HTTP/JSON/경매/fan-out baseline으로 측정하고 개선합니다.
 
