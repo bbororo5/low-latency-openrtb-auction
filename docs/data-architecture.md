@@ -57,7 +57,22 @@ Serving copy는 빠른 조회를 위한 상태이지 원본이 아니다. 재시
 
 현재 재현 가능한 initial data나 in-memory catalog는 임시 가짜 데이터로 취급하지 않는다. 향후 외부 source of truth에서 로드될 serving copy의 최소 구현으로 본다.
 
-## 4. Core Invariants
+## 4. Data Constraints
+
+데이터 제약조건은 저장소 제품 선택보다 먼저 지켜야 하는 조건이다. 이 조건을 어기면 PostgreSQL, Redis/Valkey, stream, in-process memory 중 무엇을 선택하든 잘못된 모델이 된다.
+
+| Constraint | Architectural consequence |
+|---|---|
+| Source of truth와 serving copy는 같은 책임이 아니다. | Redis/Valkey나 process memory를 쓰더라도 그것이 운영 원본인지 hot path 복제본인지 먼저 구분해야 한다. |
+| Serving copy는 재구성 가능해야 한다. | process restart나 cache loss 이후 원본에서 다시 만들 수 없는 상태는 serving copy로 둘 수 없다. |
+| Hot path transient state는 장기 진실원이 아니다. | `AuctionCommand`, Bid Judgment result, Winner Decision은 요청 단위 정합성은 가져야 하지만 장기 저장 기준이 아니다. |
+| External observation은 검증 전 사실이다. | DSP가 BidResponse를 반환했다는 사실과 그 bid가 유효하다는 판단은 분리되어야 한다. |
+| Business event가 도입되면 identity가 먼저 필요하다. | win/impression/billing event는 duplicate handling 없이 append-only stream에 넣으면 안 된다. |
+| Ledger state는 cache나 metrics로 대체할 수 없다. | budget, charge, settlement는 idempotency와 reconciliation을 전제로 별도 모델링해야 한다. |
+| Observability data는 샘플링과 누락을 허용할 수 있다. | metrics/logs/traces를 billing, ledger, audit source로 사용하면 안 된다. |
+| SSP와 DSP store ownership은 분리해서 생각한다. | 같은 DB 제품을 쓰더라도 SSP inventory와 DSP campaign은 서로 다른 소유 데이터이며 장애/변경 경계도 다르다. |
+
+## 5. Core Invariants
 
 | Invariant | Why it matters |
 |---|---|
@@ -69,7 +84,7 @@ Serving copy는 빠른 조회를 위한 상태이지 원본이 아니다. 재시
 | `NO_WINNER`는 정상 경매 결과일 수 있다. | 장애와 비낙찰을 구분한다. |
 | Observability data는 business event나 ledger의 대체물이 아니다. | metrics 누락이나 샘플링이 비즈니스 진실을 바꾸면 안 된다. |
 
-## 5. State Transitions
+## 6. State Transitions
 
 ### Auction Lifecycle
 
@@ -93,7 +108,7 @@ Serving copy는 빠른 조회를 위한 상태이지 원본이 아니다. 재시
 | BidResponse fails validation | `INVALID_BID` | No |
 | BidResponse passes validation | valid candidate | Yes |
 
-## 6. Consistency Requirements
+## 7. Consistency Requirements
 
 | Consistency class | Data |
 |---|---|
@@ -105,7 +120,7 @@ Serving copy는 빠른 조회를 위한 상태이지 원본이 아니다. 재시
 
 현재 hot path는 request-local consistency가 핵심이다. money/ledger는 strong business consistency가 필요하므로 캐시나 metrics로 대체하지 않는다.
 
-## 7. Deferred Data Decisions
+## 8. Deferred Data Decisions
 
 | Decision | Why deferred |
 |---|---|
