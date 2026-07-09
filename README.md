@@ -1,19 +1,14 @@
 # Low-Latency OpenRTB Bidding System
 
-이 프로젝트의 출발점은 광고 도메인을 넓게 구현하는 것이 아니라, **계약된 요청을 검증하고 제한 시간 안에서 외부 참여자의 지연, 무응답, 규약 위반 가능성을 처리하는 백엔드 시스템을 어떻게 설계하고 검증할 것인가**입니다.
+이 프로젝트는 RTB 광고 도메인을 빌려, **성능 제약이 강한 백엔드 hot path를 설계하고, 동시 외부 호출을 처리하며, 관측 결과를 바탕으로 병목을 분석하고 최적화하는 역량**을 보여주는 것을 목표로 합니다.
 
-채용자가 이 저장소에서 확인할 수 있어야 하는 것은 특정 광고 지식의 양이 아니라, 다음과 같은 엔지니어링 역량입니다.
+RTB를 선택한 이유는 광고 지식 자체가 아니라, 이 도메인의 핵심 실행 경로가 다음 세 가지 문제를 작게 드러내기 때문입니다.
 
-- 모호한 비즈니스 요청을 실행 가능한 문제로 축소하고 성공 기준을 먼저 세우는 능력
-- 내부 명령, 외부 API 계약, 관측 데이터, 영속 상태를 구분해 모델링하는 능력
-- deadline이 단순 성능 목표가 아니라 correctness 조건이 되는 흐름을 설계하는 능력
-- partial failure, timeout, late response, invalid response를 정상적인 시스템 사건으로 분류하는 능력
-- concurrent fan-out/fan-in 경로에서 결과 수집과 결정 책임을 분리하는 능력
-- 테스트, latency 측정, 결과 메트릭으로 설계 주장을 검증하는 능력
+- **성능 제약**: 제한 시간 안에 경매 결과를 반환해야 하며, 늦게 도착한 응답은 좋은 가격이어도 사용할 수 없습니다.
+- **동시성**: 하나의 요청이 여러 DSP 호출로 fan-out되고, 시스템은 deadline까지 관찰된 응답을 모아 결정을 내려야 합니다.
+- **관측 기반 최적화**: p95/p99 latency, timeout rate, DSP별 응답 분포를 측정하고, HTTP/JSON/경매/fan-out 비용을 분리해 병목을 설명해야 합니다.
 
-RTB를 선택한 이유는 이 역량들을 작은 실행 경로 안에서 동시에 드러낼 수 있기 때문입니다. 하나의 광고 슬롯 요청은 provider-facing 요청 검증, DSP-facing OpenRTB 계약 생성, 여러 외부 참여자 호출, 제한 시간 내 응답 수집, 유효 후보 판단, winner/no-winner 결정, latency 측정을 모두 요구합니다.
-
-따라서 이 프로젝트는 Provider Slot Request를 받아 SSP가 OpenRTB 2.6 입찰 요청(`BidRequest`)을 생성하고, 여러 DSP의 입찰 응답(`BidResponse`)을 제한 시간 안에 수집해 낙찰자와 낙찰가를 결정하는 저지연 RTB 입찰 시스템을 단계적으로 구현합니다.
+따라서 이 프로젝트는 Provider Slot Request를 받은 SSP가 OpenRTB 2.6 입찰 요청(`BidRequest`)을 생성하고, 여러 DSP의 입찰 응답(`BidResponse`)을 제한 시간 안에 수집해 winner 또는 no-winner를 결정하는 저지연 RTB 입찰 시스템을 단계적으로 구현합니다.
 
 현재 단계는 provider-facing slot request 경로, SSP-DSP OpenRTB 경계, 기본 DSP fan-out, 낙찰 판단, k6 성능 스크립트를 함께 맞추는 단계입니다.
 
