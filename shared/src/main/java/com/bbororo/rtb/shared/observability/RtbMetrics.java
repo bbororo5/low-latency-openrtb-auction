@@ -50,6 +50,14 @@ public final class RtbMetrics {
         sspDspInflightCalls.incrementAndGet();
     }
 
+    public void recordSspDspTerminalResult(String dspId, String result) {
+        registry.counter(
+                "rtb_ssp_dsp_terminal_result_total",
+                "dsp_id", RtbMetricTags.value(dspId),
+                "result", RtbMetricTags.value(result)
+        ).increment();
+    }
+
     public void decrementSspDspInflightCalls() {
         sspDspInflightCalls.updateAndGet(value -> Math.max(0, value - 1));
     }

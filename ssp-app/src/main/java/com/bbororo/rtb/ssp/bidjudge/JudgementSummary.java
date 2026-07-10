@@ -1,11 +1,14 @@
 package com.bbororo.rtb.ssp.bidjudge;
 
 public record JudgementSummary(
-        int bidCount,
+        int validBidCount,
         int noBidCount,
         int timeoutCount,
-        int lateBidCount,
         int invalidBidCount,
         int errorCount
 ) {
+
+    public int totalCount() {
+        return validBidCount + noBidCount + timeoutCount + invalidBidCount + errorCount;
+    }
 }

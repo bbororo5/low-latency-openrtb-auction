@@ -18,7 +18,7 @@ import java.util.Objects;
 
 public final class DefaultAuctionFlow implements AuctionFlow {
 
-    private static final JudgementSummary EMPTY_SUMMARY = new JudgementSummary(0, 0, 0, 0, 0, 0);
+    private static final JudgementSummary EMPTY_SUMMARY = new JudgementSummary(0, 0, 0, 0, 0);
 
     private final AuctionDeadlinePolicy deadlinePolicy;
     private final DspGateway dspGateway;

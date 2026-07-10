@@ -1,81 +1,44 @@
-# ADR-005: Hot-Path Observability
+# ADR-005: Aggregate Hot-Path Observability
 
-Status: Proposed
+Status: Accepted
+Verification: Partial
 Date: 2026-07-10
-Derived from: `ASR-006`, `ASR-007`; `AD-004`, `AD-006`
-Related: `ADR-001`, `ADR-002`, `ADR-004`
+Derived from: `ASR-006~007`; `AD-004`, `AD-007`
 
 ## Decision Question
 
-경매 결과 오류와 latency/resource 병목을 설명하는 최소 신호를 어떤 방식으로 기록하고 노출할 것인가?
+경매 오류와 latency/resource 병목을 설명하는 최소 신호를 어떻게 기록하고 노출할 것인가?
 
-## Why This Is Not Accepted Yet
+## Options and Trade-offs
 
-현재 구현은 Micrometer Prometheus registry로 auction/DSP latency와 result, runtime/executor signal을 노출한다. Prometheus와 Grafana를 연결할 수 있지만 다음이 검증되지 않았다.
-
-- `QR-007`의 필수 신호 전체가 실제로 조회되는지
-- 관측 on/off p99 차이가 `QR-008`의 10% 이내인지
-- post-cutoff `LATE_RESPONSE`와 개별 요청 원인을 어떤 log/trace로 연결할지
-
-따라서 Micrometer는 existing baseline option이며 Accepted decision이 아니다.
-
-## Hard Requirements
-
-| Requirement | Pass condition |
-|---|---|
-| `QR-007` | auction/DSP latency와 result, in-flight, executor active/queued/rejected를 조회할 수 있다. |
-| `QR-008` | observability on/off p99 차이 ≤ 10% |
-| `QR-009`, `ASR-007` | 결과에 commit, environment, topology, workload, domain/system signal이 포함된다. |
-| Cardinality | request, impression, bid, campaign, creative ID를 metric tag로 사용하지 않는다. |
-| Correctness | telemetry 장애나 sampling이 AuctionResult를 바꾸지 않는다. |
-
-## Options
-
-| Option | Description | Expected advantage | Primary risk |
-|---|---|---|---|
-| A. Custom minimal metrics | 직접 counter/histogram과 exposition 구현 | 가장 작은 의존성과 명시적 비용 | format, histogram, lifecycle 유지보수 부담 |
-| B. Micrometer metrics + structured diagnostic log | 필수 집계는 metrics, 개별 원인은 log | 기존 baseline을 활용하고 cardinality를 분리 | log correlation과 비동기 기록 설계 필요 |
-| C. Micrometer metrics + sampled trace | metrics에 SSP→DSP sampled trace 추가 | 병목 경로 확인 용이 | sampling 정책과 trace overhead |
-| D. Full trace for every request | 모든 요청의 전체 call flow 기록 | 가장 상세한 진단 | `QR-008` 위반과 저장 비용 위험 |
-
-## Evaluation Criteria
-
-| Criterion | Weight | Evidence |
-|---|---:|---|
-| Required signal coverage | 5 | `QR-007` signal checklist |
-| Hot-path overhead | 5 | observability on/off `VP-002`, `VP-003` |
-| Cardinality safety | 5 | metric schema inspection |
-| Overload diagnosis | 4 | `VP-004` saturation/recovery explanation |
-| Request-level diagnosis | 3 | failure fixture correlation |
-| Maintenance cost | 2 | custom code와 operational surface |
-
-## Comparison
-
-아직 점수를 부여하지 않는다. Option B가 existing baseline에 가장 가깝지만 `LATE_RESPONSE`, executor saturation, overhead 검증이 끝나지 않았다.
+| Option | Signal coverage | Expected overhead | Request diagnosis | Maintenance | Result |
+|---|---:|---:|---:|---:|---|
+| Custom metrics | 3 | 5 | 1 | 2 | Reject: exposition/histogram 유지비 |
+| Micrometer aggregate metrics | 5 | 4 | 2 | 5 | Select |
+| Metrics + sampled trace | 5 | 3 | 4 | 3 | Revisit candidate |
+| Full trace every request | 5 | 1 | 5 | 2 | Reject for current hot path |
 
 ## Decision
 
-결정하지 않음. Option B 형태의 existing baseline을 유지해 evidence를 수집한다.
+- Micrometer Prometheus registry로 auction/DSP latency와 result를 기록한다.
+- gateway observation과 judge가 확정한 DSP terminal result를 별도 metric으로 기록한다.
+- DSP in-flight와 executor active/pool/queued/completed/rejected, JVM runtime 신호를 노출한다.
+- request, impression, bid, campaign, creative ID를 metric tag로 사용하지 않는다.
+- trace는 기본 구성에 넣지 않는다. 개별 상관관계가 필수인 장애가 확인되면 sampled trace를 재검토한다.
 
-## Expected Consequences
+## Consequences
 
-- 장점: 현재 metric과 dashboard 자산을 계속 활용할 수 있다.
-- 단점: Accepted 전까지 trace 미도입이나 log 부족을 의도된 최종 구조로 해석할 수 없다.
-- 위험: 관측 대상 자체가 누락되면 낮은 overhead가 좋은 대안처럼 보일 수 있다.
+- 고정 cardinality로 capacity와 saturation을 비교할 수 있다.
+- 개별 요청의 post-cutoff lifecycle을 metrics만으로 재구성할 수 없다.
+- instrumentation overhead는 아직 수치로 검증되지 않았다.
 
-## Verification Plan
+## Verification
 
-1. `QR-007` signal checklist를 자동 또는 수동 검증한다.
-2. 동일 target과 workload에서 observability on/off로 `VP-002`, `VP-003`을 반복한다.
-3. `VP-004`의 최초 포화 원인을 필수 signal만으로 설명한다.
-4. timeout 후 late response fixture로 metric/log correlation을 검증한다.
-
-## Observed Result
-
-아직 없음. 기존 dashboard와 report는 baseline 자산이지만 10% overhead 비교 증거는 아니다.
+- Passed: metric 이름/tag schema와 executor binding tests/inspection
+- Pending: observability on/off p99 차이 `QR-008` ≤ 10%
+- Pending: `VP-004` 병목 설명 가능 여부
 
 ## Revisit Trigger
 
-- 필수 signal checklist 또는 overhead 비교 결과가 준비됨
-- `ADR-001`, `ADR-002`가 새로운 lifecycle/saturation signal을 요구함
-- request-level 원인 분석이 metrics와 structured log만으로 불가능함
+- aggregate metric만으로 반복 장애의 원인을 분리할 수 없음
+- `QR-008` overhead 기준 실패

@@ -29,7 +29,7 @@ public final class ProviderSlotAuctionHttpHandler implements HttpHandler {
     private static final String POST = "POST";
     private static final String CONTENT_TYPE = "Content-Type";
     private static final String APPLICATION_JSON = "application/json";
-    private static final JudgementSummary EMPTY_SUMMARY = new JudgementSummary(0, 0, 0, 0, 0, 0);
+    private static final JudgementSummary EMPTY_SUMMARY = new JudgementSummary(0, 0, 0, 0, 0);
 
     private final SlotRequestHandler slotRequestHandler;
     private final AuctionFlow auctionFlow;
@@ -67,10 +67,9 @@ public final class ProviderSlotAuctionHttpHandler implements HttpHandler {
                 return;
             }
 
-            Instant receivedAt = Instant.now();
             ProviderSlotRequest request = decodeRequest(exchange);
             mediaType = mediaTypeTag(request);
-            SlotRequestHandlingResult handlingResult = slotRequestHandler.handle(request, receivedAt);
+            SlotRequestHandlingResult handlingResult = slotRequestHandler.handle(request, startedAt);
             AuctionResult auctionResult = switch (handlingResult) {
                 case AcceptedSlotRequest accepted -> auctionFlow.run(accepted.auctionCommand());
                 case RejectedSlotRequest rejected -> rejectedResult(rejected);

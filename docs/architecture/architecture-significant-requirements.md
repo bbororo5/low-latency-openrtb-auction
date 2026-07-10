@@ -27,6 +27,7 @@ ASR은 설계 대안이나 선택 결과가 아니다. 이 문서는 `무엇을 
 | `ASR-005` | Stable provider/OpenRTB boundary | `FR-001~005`, `C-001~004`, `C-006` | Medium | Medium |
 | `ASR-006` | Diagnostic observability with bounded cost | `QR-007~008` | High | Medium |
 | `ASR-007` | Reproducible performance evidence | `G-002~003`, `QR-009`, `A-004` | High | Medium |
+| `ASR-008` | Immutable startup serving snapshots | `FR-002`, `FR-009`, `A-001`, `OOS-004` | Medium | Medium |
 
 `Importance`는 프로젝트 목표 기여도, `Risk`는 구현 실패 가능성과 영향 범위를 뜻한다. 둘 다 High인 ASR은 P0 ADR의 우선 입력이다.
 
@@ -97,6 +98,19 @@ Architecture impact: external observation, validated candidate, winner decision 
 
 Architecture impact: 외부 입력 모델, 내부 auction context, OpenRTB wire model을 하나의 범용 객체로 합치지 않는다.
 
+### `ASR-008` Immutable startup serving snapshots
+
+| Element | Definition |
+|---|---|
+| Source | SSP/DSP process bootstrap |
+| Stimulus | inventory 또는 campaign serving data를 process에 제공하고 요청 처리를 시작한다. |
+| Environment | process lifetime, runtime reload disabled |
+| Artifact | inventory catalog, campaign lookup, request/bid handling |
+| Response | 입력 값을 immutable snapshot으로 복사하고 모든 hot-path read를 local snapshot에서 수행한다. 변경은 재시작 후에만 보인다. |
+| Measure | hot-path external data call 0건; 생성 이후 collection mutation 불가; 동일 process에서 동일 key의 serving view가 바뀌지 않음 |
+
+Architecture impact: 원본 데이터 관리와 serving read model을 분리하고, 현재 범위에는 reload protocol이나 분산 일관성을 도입하지 않는다.
+
 ### `ASR-006` Diagnostic observability with bounded cost
 
 | Element | Definition |
@@ -132,6 +146,6 @@ Architecture impact: load generator를 target 자원과 분리하고, 실험 구
 | Contract tests | provider input, OpenRTB subset, HTTP status/error mapping |
 | Load tests | `VP-002`, `VP-003` |
 | Stress/recovery tests | `VP-004` |
-| Architecture tests | provider/domain/OpenRTB model boundary와 의존 방향 |
+| Architecture tests | provider/domain/OpenRTB model boundary, snapshot read boundary와 의존 방향 |
 
 후속 ADR은 각 ASR의 `Response`와 `Measure`를 평가 기준으로 사용해야 한다.

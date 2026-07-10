@@ -24,7 +24,7 @@ public final class DspHttpResultMapper {
 
     public DspCallResult fromResponse(DspHttpResponse response, Deadline deadline) {
         if (response.receivedAt().isAfter(deadline.value())) {
-            return result(response.endpoint(), DspCallStatus.LATE_BID, null, response.receivedAt());
+            return result(response.endpoint(), DspCallStatus.TIMEOUT, null, response.receivedAt());
         }
         if (response.statusCode() == HTTP_NO_CONTENT) {
             return result(response.endpoint(), DspCallStatus.NO_BID, null, response.receivedAt());
@@ -45,7 +45,7 @@ public final class DspHttpResultMapper {
             BidResponse bidResponse = codec.decodeResponse(response.body());
             return result(response.endpoint(), DspCallStatus.BID_RECEIVED, bidResponse, response.receivedAt());
         } catch (OpenRtbJsonCodecException e) {
-            return result(response.endpoint(), DspCallStatus.ERROR, null, response.receivedAt());
+            return result(response.endpoint(), DspCallStatus.INVALID_RESPONSE, null, response.receivedAt());
         }
     }
 

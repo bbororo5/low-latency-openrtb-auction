@@ -2,7 +2,6 @@ package com.bbororo.rtb.ssp.dspgateway;
 
 import com.bbororo.rtb.shared.openrtb.BidRequest;
 import com.bbororo.rtb.shared.openrtb.codec.OpenRtbJsonCodec;
-import com.bbororo.rtb.shared.openrtb.codec.OpenRtbJsonCodecException;
 import com.bbororo.rtb.shared.observability.RtbMetrics;
 import com.bbororo.rtb.ssp.auctionflow.Deadline;
 
@@ -45,12 +44,13 @@ public final class HttpDspGateway implements DspGateway {
         if (endpoints.isEmpty()) {
             return List.of();
         }
+        if (!Instant.now().isBefore(deadline.value())) {
+            return List.of();
+        }
 
-        String jsonBody;
-        try {
-            jsonBody = codec.encodeRequest(bidRequest);
-        } catch (OpenRtbJsonCodecException e) {
-            return errorResults(endpoints);
+        String jsonBody = codec.encodeRequest(withRemainingTmax(bidRequest, deadline));
+        if (!Instant.now().isBefore(deadline.value())) {
+            return List.of();
         }
 
         List<DspCallFuture> futures = sendRequests(endpoints, jsonBody, deadline);
@@ -65,6 +65,9 @@ public final class HttpDspGateway implements DspGateway {
     ) {
         List<DspCallFuture> futures = new ArrayList<>();
         for (DspEndpoint endpoint : endpoints) {
+            if (!Instant.now().isBefore(deadline.value())) {
+                break;
+            }
             Duration timeout = remaining(deadline);
             Instant startedAt = Instant.now();
             AtomicBoolean inflight = new AtomicBoolean(true);
@@ -141,21 +144,18 @@ public final class HttpDspGateway implements DspGateway {
         }
     }
 
-    private List<DspCallResult> errorResults(List<DspEndpoint> endpoints) {
-        Instant receivedAt = Instant.now();
-        List<DspCallResult> results = new ArrayList<>();
-        for (DspEndpoint endpoint : endpoints) {
-            results.add(resultMapper.fromFailure(endpoint, new OpenRtbJsonCodecException("Failed to encode request", null), receivedAt));
-        }
-        return List.copyOf(results);
-    }
-
     private static Duration remaining(Deadline deadline) {
         Duration remaining = Duration.between(Instant.now(), deadline.value());
         if (remaining.isZero() || remaining.isNegative()) {
             return Duration.ofMillis(1);
         }
         return remaining;
+    }
+
+    private static BidRequest withRemainingTmax(BidRequest bidRequest, Deadline deadline) {
+        long remainingMillis = Math.max(1, remaining(deadline).toMillis());
+        int outboundTmax = (int) Math.min(Integer.MAX_VALUE, remainingMillis);
+        return new BidRequest(bidRequest.id(), bidRequest.imp(), outboundTmax, bidRequest.at());
     }
 
     private record DspCallFuture(

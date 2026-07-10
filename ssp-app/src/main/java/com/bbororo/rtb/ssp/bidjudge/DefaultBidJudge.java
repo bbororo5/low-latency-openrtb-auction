@@ -1,19 +1,35 @@
 package com.bbororo.rtb.ssp.bidjudge;
 
+import com.bbororo.rtb.shared.common.MediaType;
 import com.bbororo.rtb.shared.openrtb.Bid;
 import com.bbororo.rtb.shared.openrtb.BidResponse;
 import com.bbororo.rtb.shared.openrtb.SeatBid;
-import com.bbororo.rtb.shared.common.MediaType;
 import com.bbororo.rtb.ssp.auctionflow.AuctionRequest;
 import com.bbororo.rtb.ssp.auctionflow.Deadline;
 import com.bbororo.rtb.ssp.dspgateway.DspCallResult;
-import com.bbororo.rtb.ssp.dspgateway.DspCallStatus;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public final class DefaultBidJudge implements BidJudge {
+
+    private static final String UNKNOWN_DSP = "unknown";
+
+    private final DspTerminalResultObserver terminalResultObserver;
+
+    public DefaultBidJudge() {
+        this((dspId, terminalResult) -> {
+        });
+    }
+
+    public DefaultBidJudge(DspTerminalResultObserver terminalResultObserver) {
+        this.terminalResultObserver = Objects.requireNonNull(
+                terminalResultObserver,
+                "terminalResultObserver must not be null"
+        );
+    }
 
     @Override
     public JudgementResult judge(AuctionRequest request, List<DspCallResult> results, Deadline deadline) {
@@ -25,44 +41,41 @@ public final class DefaultBidJudge implements BidJudge {
         }
 
         for (DspCallResult result : results) {
-            judgeOne(request, deadline, result, validCandidates, summary);
+            DspTerminalResult terminalResult = classify(request, deadline, result, validCandidates);
+            summary.increment(terminalResult);
+            terminalResultObserver.record(dspId(result), terminalResult);
         }
 
         return new JudgementResult(List.copyOf(validCandidates), summary.toImmutable());
     }
 
-    private static void judgeOne(
+    private static DspTerminalResult classify(
             AuctionRequest request,
             Deadline deadline,
             DspCallResult result,
-            List<ValidBidCandidate> validCandidates,
-            MutableSummary summary
+            List<ValidBidCandidate> validCandidates
     ) {
         if (result == null || result.status() == null) {
-            summary.invalidBidCount++;
-            return;
+            return DspTerminalResult.ERROR;
         }
 
-        switch (result.status()) {
-            case NO_BID -> summary.noBidCount++;
-            case TIMEOUT -> summary.timeoutCount++;
-            case ERROR -> summary.errorCount++;
-            case LATE_BID -> summary.lateBidCount++;
-            case BID_RECEIVED -> judgeBidReceived(request, deadline, result, validCandidates, summary);
-        }
+        return switch (result.status()) {
+            case NO_BID -> DspTerminalResult.NO_BID;
+            case TIMEOUT -> DspTerminalResult.TIMEOUT;
+            case ERROR -> DspTerminalResult.ERROR;
+            case INVALID_RESPONSE -> DspTerminalResult.INVALID_BID;
+            case BID_RECEIVED -> classifyBidResponse(request, deadline, result, validCandidates);
+        };
     }
 
-    private static void judgeBidReceived(
+    private static DspTerminalResult classifyBidResponse(
             AuctionRequest request,
             Deadline deadline,
             DspCallResult result,
-            List<ValidBidCandidate> validCandidates,
-            MutableSummary summary
+            List<ValidBidCandidate> validCandidates
     ) {
-        summary.bidCount++;
         if (deadline != null && result.receivedAt() != null && result.receivedAt().isAfter(deadline.value())) {
-            summary.lateBidCount++;
-            return;
+            return DspTerminalResult.TIMEOUT;
         }
 
         BidResponse bidResponse = result.bidResponse();
@@ -71,8 +84,7 @@ public final class DefaultBidJudge implements BidJudge {
                 || unsupportedCurrency(request, bidResponse)
                 || bidResponse.seatbid() == null
                 || bidResponse.seatbid().isEmpty()) {
-            summary.invalidBidCount++;
-            return;
+            return DspTerminalResult.INVALID_BID;
         }
 
         boolean acceptedAnyBid = false;
@@ -88,13 +100,13 @@ public final class DefaultBidJudge implements BidJudge {
             }
         }
 
-        if (!acceptedAnyBid) {
-            summary.invalidBidCount++;
-        }
+        return acceptedAnyBid ? DspTerminalResult.VALID_BID : DspTerminalResult.INVALID_BID;
     }
 
     private static boolean isValidBid(AuctionRequest request, Bid bid) {
         return bid != null
+                && bid.id() != null
+                && !bid.id().isBlank()
                 && request.impId().equals(bid.impid())
                 && bid.price() != null
                 && bid.price().compareTo(BigDecimal.ZERO) > 0
@@ -123,20 +135,35 @@ public final class DefaultBidJudge implements BidJudge {
         };
     }
 
+    private static String dspId(DspCallResult result) {
+        if (result == null || result.dspId() == null || result.dspId().isBlank()) {
+            return UNKNOWN_DSP;
+        }
+        return result.dspId();
+    }
+
     private static final class MutableSummary {
-        private int bidCount;
+        private int validBidCount;
         private int noBidCount;
         private int timeoutCount;
-        private int lateBidCount;
         private int invalidBidCount;
         private int errorCount;
 
+        private void increment(DspTerminalResult result) {
+            switch (result) {
+                case VALID_BID -> validBidCount++;
+                case NO_BID -> noBidCount++;
+                case TIMEOUT -> timeoutCount++;
+                case INVALID_BID -> invalidBidCount++;
+                case ERROR -> errorCount++;
+            }
+        }
+
         private JudgementSummary toImmutable() {
             return new JudgementSummary(
-                    bidCount,
+                    validBidCount,
                     noBidCount,
                     timeoutCount,
-                    lateBidCount,
                     invalidBidCount,
                     errorCount
             );

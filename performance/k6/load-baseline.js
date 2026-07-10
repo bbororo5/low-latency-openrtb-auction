@@ -3,8 +3,8 @@ import { check } from "k6";
 
 const BASE_URL = __ENV.BASE_URL || "http://localhost:8080";
 const INGRESS_MODE = __ENV.INGRESS_MODE || "slot";
-const RPS = Number(__ENV.RPS || 10);
-const DURATION = __ENV.DURATION || "1m";
+const RPS = Number(__ENV.RPS || 50);
+const DURATION = __ENV.DURATION || "2m";
 const PRE_ALLOCATED_VUS = Number(__ENV.PRE_ALLOCATED_VUS || Math.max(10, RPS));
 const MAX_VUS = Number(__ENV.MAX_VUS || Math.max(50, RPS * 2));
 
@@ -23,6 +23,8 @@ export const options = {
   thresholds: {
     checks: ["rate==1.0"],
     http_req_failed: ["rate==0"],
+    dropped_iterations: ["count==0"],
+    http_req_duration: ["p(99)<150"],
   },
 };
 
@@ -49,7 +51,7 @@ export default function () {
     "status is 200": (res) => res.status === 200,
     "auction returns winner": () => body.status === "WINNER",
     "dsp-b wins default topology": () => body.winnerDspId === "dsp-b",
-    "two DSPs bid": () => body.dspResultCounts?.bidCount === 2,
+    "two DSPs return valid bids": () => body.dspResultCounts?.validBidCount === 2,
     "one DSP returns no-bid": () => body.dspResultCounts?.noBidCount === 1,
     "one DSP times out": () => body.dspResultCounts?.timeoutCount === 1,
     "no invalid bids": () => body.dspResultCounts?.invalidBidCount === 0,

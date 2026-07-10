@@ -57,6 +57,37 @@ class DspHttpExecutorTest {
         }
     }
 
+    @Test
+    void accepts_new_work_after_a_saturated_queue_drains() throws InterruptedException {
+        DspHttpExecutor executor = new DspHttpExecutor(
+                new DspHttpExecutorConfig(1, 1, 1, Duration.ofMillis(100))
+        );
+        CountDownLatch release = new CountDownLatch(1);
+        CountDownLatch recovered = new CountDownLatch(1);
+
+        try {
+            executor.execute(awaitingTask(release));
+            executor.execute(() -> {
+            });
+            assertThrows(RejectedExecutionException.class, () -> executor.execute(() -> {
+            }));
+
+            release.countDown();
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(1);
+            while (executor.getQueue().size() > 0 && System.nanoTime() < deadline) {
+                Thread.onSpinWait();
+            }
+            executor.execute(recovered::countDown);
+
+            assertTrue(recovered.await(1, TimeUnit.SECONDS));
+            assertEquals(1, executor.rejectedTaskCount());
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+            assertTrue(executor.awaitTermination(1, TimeUnit.SECONDS));
+        }
+    }
+
     private static Runnable awaitingTask(CountDownLatch release) {
         return () -> {
             try {

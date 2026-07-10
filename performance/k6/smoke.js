@@ -43,7 +43,7 @@ export default function () {
     "status is 200": (res) => res.status === 200,
     "auction returns winner": () => body.status === "WINNER",
     "dsp-b wins default topology": () => body.winnerDspId === "dsp-b",
-    "two DSPs bid": () => body.dspResultCounts?.bidCount === 2,
+    "two DSPs return valid bids": () => body.dspResultCounts?.validBidCount === 2,
     "one DSP returns no-bid": () => body.dspResultCounts?.noBidCount === 1,
     "one DSP times out": () => body.dspResultCounts?.timeoutCount === 1,
   });
@@ -71,7 +71,7 @@ function payload() {
           bidfloorcur: "USD",
         },
       ],
-      tmax: 120,
+      tmax: 300,
       at: 1,
     });
   }
@@ -82,6 +82,6 @@ function payload() {
     mediaType: "banner",
     width: 300,
     height: 250,
-    tmax: 120,
+    tmax: 300,
   });
 }

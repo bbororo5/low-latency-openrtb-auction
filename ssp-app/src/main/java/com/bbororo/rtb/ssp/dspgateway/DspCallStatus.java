@@ -4,6 +4,6 @@ public enum DspCallStatus {
     BID_RECEIVED,
     NO_BID,
     TIMEOUT,
-    ERROR,
-    LATE_BID
+    INVALID_RESPONSE,
+    ERROR
 }

@@ -14,6 +14,7 @@
 | Capacity | timeout DSP를 제외하고 순수 경매 처리량 한계 확인 | `load-capacity.js` |
 | Timeout resilience | timeout DSP가 있을 때 deadline 격리 확인 | `load-baseline.js` |
 | Stress | 부하를 올리며 시스템 한계와 병목 지점 확인 | `load-capacity.js` 사용 |
+| Overload recovery | 최초 실패 RPS의 2배 부하 후 1 RPS 회복 확인 | `overload-recovery.js` |
 | Spike | 짧은 시간의 급격한 트래픽 증가 영향 확인 | 예정 |
 | Soak | 장시간 부하에서 누수와 누적 악화 확인 | 후순위 |
 
@@ -66,7 +67,9 @@ INGRESS_MODE=openrtb BASE_URL=http://localhost:8080 k6 run performance/k6/smoke.
 - HTTP status가 `200`인지
 - AuctionResult가 `WINNER`인지
 - 기본 topology에서 `dsp-b`가 낙찰되는지
-- DSP 결과 분포가 `bid=2`, `no-bid=1`, `timeout=1`인지
+- DSP 결과 분포가 `validBid=2`, `no-bid=1`, `timeout=1`인지
+
+smoke는 cold connection을 포함한 배선 확인이므로 `tmax=300ms`를 사용한다. `VP-002~003`의 120ms budget과 latency 합격 기준은 `load-capacity.js`, `load-baseline.js`에서만 판정한다.
 
 이 smoke test는 성능 한계를 측정하지 않는다. k6 요청, SSP/DSP 연결, AuctionResult, Prometheus metric 생성이 함께 동작하는지 확인하는 첫 단계다.
 
@@ -133,10 +136,10 @@ Capacity topology:
 - `checks == 100%`
 - `http_req_failed == 0%`
 - `winnerDspId == dsp-b`
-- DSP 결과 분포가 `bid=2`, `no-bid=1`, `timeout=0`, `invalid=0`, `error=0`으로 유지
+- DSP 결과 분포가 `validBid=2`, `no-bid=1`, `timeout=0`, `invalid=0`, `error=0`으로 유지
 - p95/p99 latency를 기록
 
-`load-capacity.js`는 아직 latency threshold로 실패하지 않는다. 이 단계의 목적은 목표 latency를 미리 가정하는 것이 아니라, 고정 조건에서 관찰된 p95/p99를 바탕으로 이후 목표 트래픽과 latency 기준을 정하는 것이다.
+`load-capacity.js`는 `VP-002`와 동일하게 100 RPS, 2분, p99 120 ms를 기본 합격 기준으로 사용한다.
 
 실행:
 
@@ -172,6 +175,27 @@ RPS=100 DURATION=2m PRE_ALLOCATED_VUS=150 MAX_VUS=300 \
 
 검증 내용:
 
-- DSP 결과 분포가 `bid=2`, `no-bid=1`, `timeout=1`, `invalid=0`, `error=0`으로 유지
+- DSP 결과 분포가 `validBid=2`, `no-bid=1`, `timeout=1`, `invalid=0`, `error=0`으로 유지
 - timeout DSP가 있어도 유효 bid 중 낙찰자를 반환
 - timeout이 전체 경매 지연과 p95/p99에 미치는 영향 확인
+
+기본값은 `VP-003`과 동일한 50 RPS, 2분, p99 150 ms다.
+
+```bash
+docker compose -f docker-compose.perf.yml --profile test run --rm k6-load-baseline
+```
+
+## Overload and Recovery
+
+먼저 `load-capacity.js`로 P0 조건이 처음 깨지는 RPS를 찾는다. 그 값의 2배를 `OVERLOAD_RPS`로 넣으면 30초 overload 후 1 RPS로 30초간 전환한다.
+
+```bash
+OVERLOAD_RPS=200 \
+  docker compose -f docker-compose.perf.yml --profile test run --rm k6-overload-recovery
+```
+
+recovery 구간은 정확한 winner와 terminal count를 연속 30회 확인한다. executor rejection 증가 정지와 in-flight 정상화는 Prometheus 결과와 함께 판정해야 하며, k6 결과만으로 `VP-004`를 통과한 것으로 보지 않는다.
+
+## Evidence Qualification
+
+동일 host에서 실행한 compose 결과는 local diagnostic이다. Current acceptance로 분류하려면 별도 load-generator host를 사용하고 [Performance Evidence Register](../../docs/evidence/performance/README.md)의 metadata와 `VP-002~004` pass condition을 모두 기록한다.

@@ -15,10 +15,23 @@ public final class FirstPriceWinnerSelector implements WinnerSelector {
 
         ValidBidCandidate winner = candidates.getFirst();
         for (ValidBidCandidate candidate : candidates) {
-            if (candidate.bid().price().compareTo(winner.bid().price()) > 0) {
+            if (isPreferred(candidate, winner)) {
                 winner = candidate;
             }
         }
         return new AuctionOutcome(Optional.of(winner));
+    }
+
+    private static boolean isPreferred(ValidBidCandidate candidate, ValidBidCandidate winner) {
+        int priceOrder = candidate.bid().price().compareTo(winner.bid().price());
+        if (priceOrder != 0) {
+            return priceOrder > 0;
+        }
+
+        int dspOrder = candidate.dspId().compareTo(winner.dspId());
+        if (dspOrder != 0) {
+            return dspOrder < 0;
+        }
+        return candidate.bid().id().compareTo(winner.bid().id()) < 0;
     }
 }

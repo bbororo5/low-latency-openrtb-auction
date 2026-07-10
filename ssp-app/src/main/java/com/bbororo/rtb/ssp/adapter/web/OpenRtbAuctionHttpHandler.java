@@ -32,7 +32,7 @@ public final class OpenRtbAuctionHttpHandler implements HttpHandler {
     private static final String POST = "POST";
     private static final String CONTENT_TYPE = "Content-Type";
     private static final String APPLICATION_JSON = "application/json";
-    private static final JudgementSummary EMPTY_SUMMARY = new JudgementSummary(0, 0, 0, 0, 0, 0);
+    private static final JudgementSummary EMPTY_SUMMARY = new JudgementSummary(0, 0, 0, 0, 0);
 
     private final OpenRtbJsonCodec codec;
     private final RequestHandler requestHandler;
@@ -74,10 +74,9 @@ public final class OpenRtbAuctionHttpHandler implements HttpHandler {
                 return;
             }
 
-            Instant receivedAt = Instant.now();
             BidRequest bidRequest = decodeRequest(exchange);
             mediaType = mediaTypeOf(bidRequest);
-            RequestHandlingResult handlingResult = requestHandler.handle(bidRequest, receivedAt);
+            RequestHandlingResult handlingResult = requestHandler.handle(bidRequest, startedAt);
 
             AuctionResult auctionResult = switch (handlingResult) {
                 case AcceptedAuctionRequest accepted -> auctionFlow.run(new AuctionCommand(bidRequest, accepted.auctionRequest()));

@@ -57,11 +57,15 @@ public final class SspApplication {
     }
 
     public static JdkSspHttpServer createServer(int port) {
+        return createServer(port, configuredDspEndpoints());
+    }
+
+    public static JdkSspHttpServer createServer(int port, List<DspEndpoint> dspEndpoints) {
         PrometheusMeterRegistry registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
         RuntimeMetrics.bindTo(registry);
         RtbMetrics metrics = new RtbMetrics(registry);
         OpenRtbJsonCodec codec = new JacksonOpenRtbJsonCodec();
-        AuctionFlow auctionFlow = auctionFlow(codec, metrics, registry);
+        AuctionFlow auctionFlow = auctionFlow(codec, metrics, registry, List.copyOf(dspEndpoints));
 
         return new JdkSspHttpServer(
                 port,
@@ -85,7 +89,8 @@ public final class SspApplication {
     private static AuctionFlow auctionFlow(
             OpenRtbJsonCodec codec,
             RtbMetrics metrics,
-            PrometheusMeterRegistry registry
+            PrometheusMeterRegistry registry,
+            List<DspEndpoint> dspEndpoints
     ) {
         var resultMapper = new DspHttpResultMapper(codec);
         var dspHttpExecutor = new DspHttpExecutor(DspHttpExecutorConfig.fromEnv());
@@ -95,7 +100,7 @@ public final class SspApplication {
                 executor -> ((DspHttpExecutor) executor).rejectedTaskCount()
         );
         var dspGateway = new HttpDspGateway(
-                new StaticDspEndpointRegistry(configuredDspEndpoints()),
+                new StaticDspEndpointRegistry(dspEndpoints),
                 codec,
                 JdkHttpDspClient.createDefault(dspHttpExecutor),
                 resultMapper,
@@ -105,7 +110,8 @@ public final class SspApplication {
         return new DefaultAuctionFlow(
                 new DefaultAuctionDeadlinePolicy(),
                 dspGateway,
-                new DefaultBidJudge(),
+                new DefaultBidJudge((dspId, terminalResult) ->
+                        metrics.recordSspDspTerminalResult(dspId, terminalResult.name())),
                 new FirstPriceWinnerSelector()
         );
     }

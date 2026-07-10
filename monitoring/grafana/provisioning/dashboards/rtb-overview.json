@@ -124,7 +124,7 @@
     {
       "id": 4,
       "type": "timeseries",
-      "title": "DSP Call Result Rate",
+      "title": "DSP Terminal Result Rate",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -152,7 +152,7 @@
         {
           "refId": "A",
           "legendFormat": "{{dsp_id}} {{result}}",
-          "expr": "sum by (dsp_id, result) (rate(rtb_ssp_dsp_call_result_total[$__rate_interval]))"
+          "expr": "sum by (dsp_id, result) (rate(rtb_ssp_dsp_terminal_result_total[$__rate_interval]))"
         }
       ]
     },

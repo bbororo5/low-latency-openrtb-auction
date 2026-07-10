@@ -143,9 +143,9 @@ services:
       - test
     environment:
       BASE_URL: http://ssp:8080
-      RPS: "${RPS:-10}"
-      DURATION: "${DURATION:-1m}"
-      PRE_ALLOCATED_VUS: "${PRE_ALLOCATED_VUS:-20}"
+      RPS: "${RPS:-50}"
+      DURATION: "${DURATION:-2m}"
+      PRE_ALLOCATED_VUS: "${PRE_ALLOCATED_VUS:-50}"
       MAX_VUS: "${MAX_VUS:-100}"
     volumes:
       - ./performance/k6:/scripts:ro
@@ -159,13 +159,28 @@ services:
       - test
     environment:
       BASE_URL: http://ssp:8080
-      RPS: "${RPS:-10}"
-      DURATION: "${DURATION:-1m}"
-      PRE_ALLOCATED_VUS: "${PRE_ALLOCATED_VUS:-20}"
-      MAX_VUS: "${MAX_VUS:-100}"
+      RPS: "${RPS:-100}"
+      DURATION: "${DURATION:-2m}"
+      PRE_ALLOCATED_VUS: "${PRE_ALLOCATED_VUS:-100}"
+      MAX_VUS: "${MAX_VUS:-200}"
     volumes:
       - ./performance/k6:/scripts:ro
     command: ["run", "/scripts/load-capacity.js"]
+    depends_on:
+      - ssp
+
+  k6-overload-recovery:
+    image: grafana/k6:1.2.1
+    profiles:
+      - test
+    environment:
+      BASE_URL: http://ssp:8080
+      OVERLOAD_RPS: "${OVERLOAD_RPS:-200}"
+      PRE_ALLOCATED_VUS: "${PRE_ALLOCATED_VUS:-200}"
+      MAX_VUS: "${MAX_VUS:-400}"
+    volumes:
+      - ./performance/k6:/scripts:ro
+    command: ["run", "/scripts/overload-recovery.js"]
     depends_on:
       - ssp
 

@@ -177,7 +177,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(rtb_ssp_dsp_call_result_total{scrape_job=\"rtb-ssp\", result=\"error\"}[$__rate_interval]))",
+          "expr": "sum(rate(rtb_ssp_dsp_terminal_result_total{scrape_job=\"rtb-ssp\", result=\"error\"}[$__rate_interval]))",
           "legendFormat": "dsp_error"
         }
       ]
@@ -306,7 +306,7 @@
     {
       "id": 7,
       "type": "timeseries",
-      "title": "SSP -> DSP Call Rate",
+      "title": "SSP DSP Terminal Result Rate",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -333,7 +333,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (dsp_id, result) (rate(rtb_ssp_dsp_call_result_total{scrape_job=\"rtb-ssp\"}[$__rate_interval]))",
+          "expr": "sum by (dsp_id, result) (rate(rtb_ssp_dsp_terminal_result_total{scrape_job=\"rtb-ssp\"}[$__rate_interval]))",
           "legendFormat": "{{dsp_id}} {{result}}"
         }
       ]

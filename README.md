@@ -7,7 +7,7 @@
 
 이 두 문제를 p95/p99 latency, timeout rate, DSP별 응답 분포, HTTP/JSON/경매/fan-out baseline으로 측정하고 개선합니다.
 
-현재 단계는 provider-facing slot request 경로, SSP-DSP OpenRTB 경계, 기본 DSP fan-out, 낙찰 판단, k6 성능 스크립트를 함께 맞추는 단계입니다.
+현재 baseline은 provider-facing slot request, SSP-DSP OpenRTB 경계, bounded DSP fan-out, deterministic winner, immutable startup snapshot, E2E와 k6 verification profile을 갖춥니다. Reference 환경의 최신 성능 acceptance evidence는 아직 수집 전입니다.
 
 ## RTB Domain Overview
 
@@ -30,16 +30,20 @@ OpenRTB는 SSP와 DSP 사이에서 입찰 요청(`BidRequest`)과 입찰 응답(
 문서는 다음 산출물 흐름을 따릅니다.
 
 ```text
+Concern Coverage
+      ↓
 Development Requirements
-├── Architecture Significant Requirements
-└── Architecture Drivers
-          ↓
-Architecture Decision Records
-          ↓
-Implementation and Verification Evidence
+      ↓
+Architecture Significant Requirements
+      ↓
+Architecture Drivers
+      ↓
+ADR ↔ System/Data/Interface Architecture
+      ↓
+Implementation ↔ Verification Evidence
 ```
 
-ASR과 Architecture Driver는 요구사항에서 각각 산출합니다. ADR은 두 산출물을 참조해 대안과 trade-off를 비교하며, 실제 비교 증거가 없으면 `Accepted`로 두지 않습니다.
+ASR은 검증 가능한 아키텍처 중요 요구이고, Architecture Driver는 ASR·목표·제약·위험을 설계 압력으로 종합합니다. ADR의 선택 상태와 verification 상태를 분리해, 결정은 고정하면서도 아직 없는 성능 증거를 완료된 것처럼 취급하지 않습니다.
 
 ## Documents
 
@@ -47,6 +51,10 @@ ASR과 Architecture Driver는 요구사항에서 각각 산출합니다. ADR은 
 - [RTB Auction System Requirements](docs/requirements/rtb-auction-system-requirements.md)
 - [Architecture Significant Requirements](docs/architecture/architecture-significant-requirements.md)
 - [Architecture Drivers](docs/architecture/architecture-drivers.md)
-- [Architecture Decision Backlog](docs/architecture/decisions/architecture-decision-backlog.md)
+- [Architecture Concern Coverage](docs/architecture/concern-coverage.md)
+- [System Architecture](docs/architecture/system-architecture.md)
+- [Data Architecture](docs/architecture/data-architecture.md)
+- [Provider and OpenRTB Interface Contracts](docs/architecture/interface-contracts.md)
+- [Architecture Decision Register](docs/architecture/decisions/architecture-decision-register.md)
 - [Architecture Decision Records](docs/architecture/decisions)
-- [Performance Evidence](docs/evidence/performance)
+- [Performance Evidence](docs/evidence/performance/README.md)
