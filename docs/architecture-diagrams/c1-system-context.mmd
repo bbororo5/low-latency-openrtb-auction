@@ -1,9 +1,0 @@
-flowchart LR
-    publisher["Publisher / Ad Slot"]
-    advertiser["Advertiser / Campaign System"]
-    system["RTB Bidding System"]
-
-    publisher -->|"ProviderSlotRequest"| system
-    system -->|"AuctionResult"| publisher
-
-    advertiser -->|"Campaign data"| system

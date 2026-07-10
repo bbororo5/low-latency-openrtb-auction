@@ -121,4 +121,3 @@ Recommended next steps:
 3. 필요하면 bounded executor 또는 별도 HTTP client 전략으로 fan-out concurrency를 제한한다.
 4. 같은 AWS loadgen topology에서 1000, 1100, 1200 RPS를 다시 측정한다.
 ```
-

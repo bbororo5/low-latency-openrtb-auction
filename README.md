@@ -23,40 +23,30 @@ OpenRTB는 SSP와 DSP 사이에서 입찰 요청(`BidRequest`)과 입찰 응답(
 
 - SSP는 provider-facing 요청을 검증하고 OpenRTB 2.6 `BidRequest`를 생성합니다.
 - 여러 경량 DSP에 같은 `BidRequest`를 전달하고 제한 시간 안에 응답을 수집합니다.
-- `no-bid`, `timeout`, `late bid`, `invalid bid`를 구분하고, 유효한 bid 중 winner 또는 no-winner를 결정합니다.
+- `no-bid`, `timeout`, `invalid bid`, `error`를 구분하고, cutoff 이후 응답은 별도 진단으로 다루며, 유효한 bid 중 winner 또는 no-winner를 결정합니다.
 
-## Planned Workflow
+## Architecture Workflow
 
-이 프로젝트는 아래 순서로 진행합니다.
+문서는 다음 산출물 흐름을 따릅니다.
 
-1. Project Goal
-2. Product Requirements
-3. Data Architecture
-4. Architecture Significant Requirements
-5. Architecture Description
-6. API / Interface Specification
-7. Implementation Technical Specification
-8. Feature Development
-9. Test & Validation
-10. Performance Measurement
-11. Architecture Decision Records
-12. Optimization
-13. Retrospective
+```text
+Development Requirements
+├── Architecture Significant Requirements
+└── Architecture Drivers
+          ↓
+Architecture Decision Records
+          ↓
+Implementation and Verification Evidence
+```
 
-ADR은 구현 전에 억지로 작성하지 않습니다. 구현과 성능 측정 중 실제 갈림길이 생겼을 때 선택지, trade-off, 결정 근거를 기록합니다.
+ASR과 Architecture Driver는 요구사항에서 각각 산출합니다. ADR은 두 산출물을 참조해 대안과 trade-off를 비교하며, 실제 비교 증거가 없으면 `Accepted`로 두지 않습니다.
 
 ## Documents
 
-- [Project Goal](docs/project-goal.md)
-- [Documentation Map](docs/README.md)
-- [Product Requirements](docs/product-requirements.md)
-- [Data Architecture](docs/data-architecture.md)
-- [Architecture Significant Requirements](docs/architecture-significant-requirements.md)
-- [Architecture Description](docs/architecture-description.md)
-- [API / Interface Specification](docs/api-interface-specification.md)
-- [Implementation Technical Specification](docs/implementation-technical-specification.md)
-- [Observability](docs/observability.md)
-- [SSP Message Contract Research](docs/ssp-message-contract-research.md)
-- [Performance Baseline](docs/performance-baseline.md)
-- [Architecture Decision Records](docs/decisions)
-- [Performance Reports](docs/performance-reports)
+- [Documentation Baseline](docs/README.md)
+- [RTB Auction System Requirements](docs/requirements/rtb-auction-system-requirements.md)
+- [Architecture Significant Requirements](docs/architecture/architecture-significant-requirements.md)
+- [Architecture Drivers](docs/architecture/architecture-drivers.md)
+- [Architecture Decision Backlog](docs/architecture/decisions/architecture-decision-backlog.md)
+- [Architecture Decision Records](docs/architecture/decisions)
+- [Performance Evidence](docs/evidence/performance)

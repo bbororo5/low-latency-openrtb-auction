@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-OUT_DIR="${OUT_DIR:-docs/performance-reports}"
+OUT_DIR="${OUT_DIR:-docs/evidence/performance}"
 DATE="${DATE:-$(date +%F)}"
 OUT_FILE="${OUT_FILE:-${OUT_DIR}/${DATE}-aws-vm-baseline.md}"
 DISK_MB="${DISK_MB:-1024}"
