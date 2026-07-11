@@ -22,7 +22,7 @@ docs/
 |---|---|
 | [Product and Domain Requirements](requirements/product-and-domain-requirements.md) | 제품 경계, actor, auction/campaign/money 의미, 기능·품질 요구, 제약과 범위 밖 항목 |
 | [Workload, Data and Verification Profile](requirements/workload-data-and-verification-profile.md) | 10M/day traffic model, dataset 규모와 skew, deadline/latency/availability 목표, 검증 scenario |
-| [Architecture-Significant Requirements](architecture/architecture-significant-requirements.md) | 요구사항 중 architecture에 measurable effect를 가지는 항목을 품질 속성 시나리오로 선별하는 workshop draft |
+| [Architecture-Significant Requirements](architecture/architecture-significant-requirements.md) | 토론을 거쳐 합의된 ASR 결과만 기록하는 workshop draft |
 
 두 문서가 하나의 Requirements package다. 첫 문서는 `무엇을 보장할지`, 두 번째 문서는 `어떤 규모·환경·장애에서 검증할지`를 정의한다.
 
@@ -46,7 +46,7 @@ Implementation and Verification Evidence   ← create after implementation
 
 ## Creation Rules
 
-1. ASR draft는 section을 하나씩 검토하며 합의된 내용만 반영한다.
+1. ASR draft에는 방법론과 토론 과정이 아니라 합의된 ASR 결과만 반영한다.
 2. 후보는 working label로 구분하고 중요도·architecture impact·추적성이 확인된 후에만 공식 ASR ID를 부여한다.
 3. Architecture Driver는 합의된 ASR과 quality conflict가 있을 때만 생성한다.
 4. ADR은 명확한 decision question과 현실적인 대안이 있을 때만 생성한다.
