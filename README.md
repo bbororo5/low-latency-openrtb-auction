@@ -1,60 +1,52 @@
-# Low-Latency OpenRTB Bidding System
+# 초저지연 OpenRTB 입찰 시스템
 
-이 프로젝트는 RTB 광고 도메인을 빌려, 백엔드 성능 엔지니어링에서 중요한 두 가지 문제를 다룹니다.
+제한 시간 경매, 자사 DSP의 캠페인 선택, 광고주 예산 정합성, 장애 지속성을 구현·검증하는 백엔드 프로젝트다.
 
-- **제한 시간 안에서의 응답 지연 관리**: 평균 응답 시간이 아니라 p95/p99 latency와 제한 시간 내 응답률을 기준으로 경매 hot path를 평가합니다. RTB에서는 늦게 도착한 응답이 좋은 가격이어도 사용할 수 없기 때문에, tail latency는 결과 품질과 직접 연결됩니다.
-- **고빈도 요청에서의 동시 처리 한계 분석**: 광고 슬롯 요청은 고빈도로 발생하고, 하나의 요청은 여러 DSP 호출로 fan-out됩니다. 이 프로젝트는 RPS를 높일 때 in-flight 작업, thread, connection, HTTP/JSON 처리, DSP 호출 비용이 어떻게 병목을 만드는지 관측합니다.
-
-이 두 문제를 p95/p99 latency, timeout rate, DSP별 응답 분포, HTTP/JSON/경매/fan-out baseline으로 측정하고 개선합니다.
-
-현재 baseline은 provider-facing slot request, SSP-DSP OpenRTB 경계, bounded DSP fan-out, deterministic winner, immutable startup snapshot, E2E와 k6 verification profile을 갖춥니다. Reference 환경의 최신 성능 acceptance evidence는 아직 수집 전입니다.
-
-## RTB Domain Overview
-
-RTB(Real-Time Bidding)는 광고 슬롯이 열리는 순간 여러 구매 측 시스템이 입찰에 참여하고, 제한 시간 안에 광고 노출 기회의 구매자를 결정하는 실시간 경매 방식입니다.
-
-이 흐름에서 SSP(Supply-Side Platform)는 publisher의 광고 슬롯 요청을 받아 입찰 가능한 요청으로 만들고, 여러 DSP(Demand-Side Platform)에 전달합니다. DSP는 캠페인 조건과 입찰 전략에 따라 bid 또는 no-bid를 반환하고, SSP는 제한 시간 안에 도착한 유효한 bid 중 winner를 결정합니다.
-
-OpenRTB는 SSP와 DSP 사이에서 입찰 요청(`BidRequest`)과 입찰 응답(`BidResponse`)을 주고받기 위한 표준 표현입니다.
-
-## Project Overview
-
-이 프로젝트는 광고 슬롯이 열렸을 때 SSP가 여러 DSP에 입찰을 요청하고, 제한 시간 안에 도착한 응답만으로 낙찰 여부를 결정하는 경매 실행 경로에 집중합니다.
-
-- SSP는 provider-facing 요청을 검증하고 OpenRTB 2.6 `BidRequest`를 생성합니다.
-- 여러 경량 DSP에 같은 `BidRequest`를 전달하고 제한 시간 안에 응답을 수집합니다.
-- `no-bid`, `timeout`, `invalid bid`, `error`를 구분하고, cutoff 이후 응답은 별도 진단으로 다루며, 유효한 bid 중 winner 또는 no-winner를 결정합니다.
-
-## Architecture Workflow
-
-문서는 다음 산출물 흐름을 따릅니다.
+## 핵심 흐름
 
 ```text
-Concern Coverage
-      ↓
-Development Requirements
-      ↓
-Architecture Significant Requirements
-      ↓
-Architecture Drivers
-      ↓
-ADR ↔ System/Data/Interface Architecture
-      ↓
-Implementation ↔ Verification Evidence
+공급자
+  ↓ 광고 기회
+SSP
+  ├── 자사 DSP → 캠페인·예산으로 입찰
+  ├── 외부 DSP A
+  └── 외부 DSP B
+  ↓
+제한 시간 내 유효 입찰로 낙찰자 결정
 ```
 
-ASR은 검증 가능한 아키텍처 중요 요구이고, Architecture Driver는 ASR·목표·제약·위험을 설계 압력으로 종합합니다. ADR의 선택 상태와 verification 상태를 분리해, 결정은 고정하면서도 아직 없는 성능 증거를 완료된 것처럼 취급하지 않습니다.
+- SSP는 요청 검증, DSP 호출, 입찰 검증, 1차 가격 경매를 담당한다.
+- 자사 DSP는 캠페인·소재를 선택하고 입찰 전부터 잠재 지출을 통제한다.
+- 낙찰·패찰·과금·만료를 중복과 순서 변경에 안전하게 처리한다.
+- 인스턴스·AZ 장애에서도 서비스와 금액 상태를 보존한다.
 
-## Documents
+## 목표 규모
 
-- [Documentation Baseline](docs/README.md)
-- [RTB Auction System Requirements](docs/requirements/rtb-auction-system-requirements.md)
-- [Architecture Significant Requirements](docs/architecture/architecture-significant-requirements.md)
-- [Architecture Drivers](docs/architecture/architecture-drivers.md)
-- [Architecture Concern Coverage](docs/architecture/concern-coverage.md)
-- [System Architecture](docs/architecture/system-architecture.md)
-- [Data Architecture](docs/architecture/data-architecture.md)
-- [Provider and OpenRTB Interface Contracts](docs/architecture/interface-contracts.md)
-- [Architecture Decision Register](docs/architecture/decisions/architecture-decision-register.md)
-- [Architecture Decision Records](docs/architecture/decisions)
-- [Performance Evidence](docs/evidence/performance/README.md)
+| 항목 | 기준 |
+|---|---|
+| 사업 물량 | 일 1천만 경매 |
+| 정상 부하 | 500 RPS, 10분 |
+| 순간 부하 | 1,000 RPS, 60초 |
+| 정상 응답 | p99 ≤ 50ms |
+| 경매 제한 시간 | 기본 180ms |
+| 장애 범위 | 인스턴스 하나와 AZ 하나의 장애 허용 |
+| 금액 안전성 | 예산 초과·중복 과금 0건, RPO 0 |
+
+수치는 특정 업체의 실측치가 아니라 재현 가능한 포트폴리오 기준이다.
+
+## 구성
+
+- `ssp-app`: 공급자 요청과 경매 실행
+- `dsp-app`: 캠페인 선택과 입찰
+- `shared`: OpenRTB 객체와 공통 관측
+- `performance/k6`: 부하 스크립트
+- `docs`: 요구사항과 아키텍처 결과
+
+## 현재 상태
+
+요구사항은 기준선 2.0으로 정리되었고 ASR을 협의 중이다. 현재 코드와 k6 결과는 초기 구현을 위한 참고로만 사용하며, 후속 아키텍처가 구현되기 전에는 합격 증거로 보지 않는다.
+
+- [문서 안내](docs/README.md)
+- [제품·도메인 요구사항](docs/요구사항/제품-도메인-요구사항.md)
+- [부하·데이터·검증 기준](docs/요구사항/부하-데이터-검증-기준.md)
+- [ASR](docs/아키텍처/ASR.md)
