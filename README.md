@@ -47,6 +47,7 @@ SSP
 요구사항은 기준선 2.0으로 정리되었고 ASR을 협의 중이다. 현재 코드와 k6 결과는 초기 구현을 위한 참고로만 사용하며, 후속 아키텍처가 구현되기 전에는 합격 증거로 보지 않는다.
 
 - [문서 안내](docs/README.md)
-- [제품·도메인 요구사항](docs/요구사항/제품-도메인-요구사항.md)
-- [부하·데이터·검증 기준](docs/요구사항/부하-데이터-검증-기준.md)
-- [ASR](docs/아키텍처/ASR.md)
+- [제품·도메인 요구사항](docs/requirements/product-domain-requirements.md)
+- [부하·데이터·검증 기준](docs/requirements/workload-data-verification.md)
+- [ASR](docs/architecture/asr.md)
+- [아키텍처 동인](docs/architecture/architecture-drivers.md)

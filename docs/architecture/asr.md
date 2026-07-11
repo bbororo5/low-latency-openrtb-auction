@@ -4,8 +4,8 @@
 
 근거:
 
-- [제품·도메인 요구사항](../요구사항/제품-도메인-요구사항.md)
-- [부하·데이터·검증 기준](../요구사항/부하-데이터-검증-기준.md)
+- [제품·도메인 요구사항](../requirements/product-domain-requirements.md)
+- [부하·데이터·검증 기준](../requirements/workload-data-verification.md)
 
 ## 1. 목록
 

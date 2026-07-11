@@ -40,4 +40,4 @@ docker compose -f docker-compose.perf.yml down
 - 성능만 보지 말고 낙찰 정확성, DSP 결과 수, 예산 불변식을 함께 확인한다.
 - 합격 시험은 대상과 분리된 부하 발생기, 전체 데이터, 장애 주입, 시험 전후 예산 대조를 포함해야 한다.
 
-최종 합격 기준은 [부하·데이터·검증 기준](../../docs/요구사항/부하-데이터-검증-기준.md)을 따른다.
+최종 합격 기준은 [부하·데이터·검증 기준](../../docs/requirements/workload-data-verification.md)을 따른다.

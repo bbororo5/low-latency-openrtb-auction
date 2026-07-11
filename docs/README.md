@@ -5,20 +5,20 @@
 ```text
 docs/
 ├── README.md
-├── 요구사항/
-│   ├── 제품-도메인-요구사항.md
-│   └── 부하-데이터-검증-기준.md
-└── 아키텍처/
-    ├── ASR.md
-    └── 아키텍처-동인.md
+├── requirements/
+│   ├── product-domain-requirements.md
+│   └── workload-data-verification.md
+└── architecture/
+    ├── asr.md
+    └── architecture-drivers.md
 ```
 
 | 문서 | 내용 |
 |---|---|
-| [제품·도메인 요구사항](요구사항/제품-도메인-요구사항.md) | 범위, 경매·캠페인·금액 규칙, 기능·품질 요구사항 |
-| [부하·데이터·검증 기준](요구사항/부하-데이터-검증-기준.md) | 요청률, 데이터 규모, 장애, 합격 기준 |
-| [ASR](아키텍처/ASR.md) | 아키텍처에 중요한 품질 시나리오와 우선순위 |
-| [아키텍처 동인](아키텍처/아키텍처-동인.md) | 반복되는 구조적 압력, 데이터 불변식, 책임 경계, 결정 질문 |
+| [제품·도메인 요구사항](requirements/product-domain-requirements.md) | 범위, 경매·캠페인·금액 규칙, 기능·품질 요구사항 |
+| [부하·데이터·검증 기준](requirements/workload-data-verification.md) | 요청률, 데이터 규모, 장애, 합격 기준 |
+| [ASR](architecture/asr.md) | 아키텍처에 중요한 품질 시나리오와 우선순위 |
+| [아키텍처 동인](architecture/architecture-drivers.md) | 반복되는 구조적 압력, 데이터 불변식, 책임 경계, 결정 질문 |
 
 ```text
 요구사항 → ASR·아키텍처 동인 → ADR → 아키텍처 → 구현·검증
