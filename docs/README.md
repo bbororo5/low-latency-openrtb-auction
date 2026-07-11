@@ -12,7 +12,8 @@ docs/
     ├── asr.md
     ├── architecture-drivers.md
     └── reviews/
-        └── data-intensive-systems-review.md
+        ├── data-intensive-systems-review.md
+        └── domain-boundaries-review.md
 ```
 
 | 문서 | 내용 |
@@ -22,6 +23,7 @@ docs/
 | [ASR](architecture/asr.md) | 아키텍처에 중요한 품질 시나리오와 우선순위 |
 | [아키텍처 동인](architecture/architecture-drivers.md) | 반복되는 구조적 압력, 데이터 불변식, 책임 경계, 결정 질문 |
 | [데이터 중심 검토](architecture/reviews/data-intensive-systems-review.md) | 데이터 원본성, 수명, 정합성, 복구 기준 검토 |
+| [도메인 경계 검토](architecture/reviews/domain-boundaries-review.md) | 의미, 불변식, 책임 소유권과 경계 간 계약 검토 |
 
 ```text
 요구사항 → ASR·아키텍처 동인 → ADR → 아키텍처 → 구현·검증
