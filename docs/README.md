@@ -10,7 +10,9 @@ docs/
 │   └── workload-data-verification.md
 └── architecture/
     ├── asr.md
-    └── architecture-drivers.md
+    ├── architecture-drivers.md
+    └── reviews/
+        └── data-intensive-systems-review.md
 ```
 
 | 문서 | 내용 |
@@ -19,6 +21,7 @@ docs/
 | [부하·데이터·검증 기준](requirements/workload-data-verification.md) | 요청률, 데이터 규모, 장애, 합격 기준 |
 | [ASR](architecture/asr.md) | 아키텍처에 중요한 품질 시나리오와 우선순위 |
 | [아키텍처 동인](architecture/architecture-drivers.md) | 반복되는 구조적 압력, 데이터 불변식, 책임 경계, 결정 질문 |
+| [데이터 중심 검토](architecture/reviews/data-intensive-systems-review.md) | 데이터 원본성, 수명, 정합성, 복구 기준 검토 |
 
 ```text
 요구사항 → ASR·아키텍처 동인 → ADR → 아키텍처 → 구현·검증
