@@ -1,6 +1,6 @@
 # 문서 안내
 
-현재 단계: ASR과 아키텍처 동인 확정, ADR 준비
+현재 단계: 첫 번째 아키텍처 설계 주기 — 분산 예산 예약 후보 분석
 
 ```text
 docs/
@@ -11,12 +11,14 @@ docs/
 └── architecture/
     ├── asr.md
     ├── architecture-drivers.md
-    └── reviews/
-        ├── data-intensive-systems-review.md
-        ├── domain-boundaries-review.md
-        ├── evolutionary-architecture-review.md
-        ├── operations-failure-review.md
-        └── trust-boundaries-review.md
+    ├── driver-analysis/
+    │   ├── data-intensive-systems.md
+    │   ├── domain-boundaries.md
+    │   ├── evolutionary-architecture.md
+    │   ├── operations-and-failure.md
+    │   └── trust-boundaries.md
+    └── design-options/
+        └── budget-reservation.md
 ```
 
 | 문서 | 내용 |
@@ -25,16 +27,18 @@ docs/
 | [부하·데이터·검증 기준](requirements/workload-data-verification.md) | 트래픽 구간, 시험 분리, 장애 입력과 합격 기준 |
 | [ASR](architecture/asr.md) | 구조를 압박하는 성능·금액·페이싱·복구·신뢰 시나리오 |
 | [아키텍처 동인](architecture/architecture-drivers.md) | 반복되는 압력, 데이터·책임 경계와 ADR 결정 목록 |
-| [데이터 중심 검토](architecture/reviews/data-intensive-systems-review.md) | 데이터 원본성, 수명, 정합성, 복구 기준 검토 |
-| [도메인 경계 검토](architecture/reviews/domain-boundaries-review.md) | 의미, 불변식, 책임 소유권과 경계 간 계약 검토 |
-| [진화적 아키텍처 검토](architecture/reviews/evolutionary-architecture-review.md) | 변화 방향, 유지할 성질, 지속적 판정 기준 검토 |
-| [운영·실패 검토](architecture/reviews/operations-failure-review.md) | 장애 전파, 성능 저하, 자원 고갈, 복구 판정 검토 |
-| [신뢰 경계 검토](architecture/reviews/trust-boundaries-review.md) | 사실을 확정할 권한, 경계별 검증, 재전송 위험 검토 |
+| [데이터 중심 분석](architecture/driver-analysis/data-intensive-systems.md) | 데이터 원본성, 수명, 정합성, 복구 압력 |
+| [도메인 경계 분석](architecture/driver-analysis/domain-boundaries.md) | 의미, 불변식, 책임 소유권과 경계 간 계약 |
+| [진화적 아키텍처 분석](architecture/driver-analysis/evolutionary-architecture.md) | 변화 방향, 유지할 성질과 지속적 판정 기준 |
+| [운영·실패 분석](architecture/driver-analysis/operations-and-failure.md) | 장애 전파, 성능 저하, 자원 고갈과 복구 압력 |
+| [신뢰 경계 분석](architecture/driver-analysis/trust-boundaries.md) | 사실을 확정할 권한과 경계별 검증 |
+| [분산 예산 예약 후보](architecture/design-options/budget-reservation.md) | 첫 설계 주기의 후보 구조, 긴장관계와 검증 시나리오 |
 
 ```text
-요구사항 → ASR·아키텍처 동인 → ADR → 아키텍처 → 구현·검증
+요구사항 → ASR → 동인 분석·종합 → 설계 후보 → ADR → 공식 아키텍처 → 구현·검증
 ```
 
-- 문서에는 합의된 결과만 남긴다.
+- 요구사항·ASR·동인·ADR·공식 아키텍처에는 합의된 결과만 남긴다.
+- `design-options/`에는 선택 전 후보를 두되 상태를 명시하고 ADR에서 결론을 참조한다.
 - 다음 단계의 빈 파일은 미리 만들지 않는다.
 - 과거 설계와 측정은 Git 기록에서만 조회한다.
