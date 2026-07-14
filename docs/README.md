@@ -1,6 +1,6 @@
 # 문서 안내
 
-현재 단계: ASR과 아키텍처 동인 확정 중
+현재 단계: ASR과 아키텍처 동인 확정, ADR 준비
 
 ```text
 docs/
@@ -21,10 +21,10 @@ docs/
 
 | 문서 | 내용 |
 |---|---|
-| [제품·도메인 요구사항](requirements/product-domain-requirements.md) | 범위, 경매·캠페인·정산 규칙, 기능·품질 요구사항 |
-| [부하·데이터·검증 기준](requirements/workload-data-verification.md) | 요청률, 데이터 규모, 정산·장애 시험과 합격 기준 |
-| [ASR](architecture/asr.md) | 성능, 금액 수렴, 장애 복구, 신뢰 경계의 핵심 시나리오 |
-| [아키텍처 동인](architecture/architecture-drivers.md) | 반복되는 구조적 압력, 데이터 불변식, 책임 경계, 결정 질문 |
+| [제품·도메인 요구사항](requirements/product-domain-requirements.md) | 경매·캠페인·페이싱·예산·통지·장애 계약 |
+| [부하·데이터·검증 기준](requirements/workload-data-verification.md) | 트래픽 구간, 시험 분리, 장애 입력과 합격 기준 |
+| [ASR](architecture/asr.md) | 구조를 압박하는 성능·금액·페이싱·복구·신뢰 시나리오 |
+| [아키텍처 동인](architecture/architecture-drivers.md) | 반복되는 압력, 데이터·책임 경계와 ADR 결정 목록 |
 | [데이터 중심 검토](architecture/reviews/data-intensive-systems-review.md) | 데이터 원본성, 수명, 정합성, 복구 기준 검토 |
 | [도메인 경계 검토](architecture/reviews/domain-boundaries-review.md) | 의미, 불변식, 책임 소유권과 경계 간 계약 검토 |
 | [진화적 아키텍처 검토](architecture/reviews/evolutionary-architecture-review.md) | 변화 방향, 유지할 성질, 지속적 판정 기준 검토 |
