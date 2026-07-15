@@ -1,6 +1,6 @@
 # 문서 안내
 
-현재 단계: 첫 번째 아키텍처 설계 주기 — 분산 예산 예약 잠정 결정
+현재 단계: 첫 번째 아키텍처 설계 주기 — 분산 예산 예약 결정
 
 ```text
 docs/
@@ -32,7 +32,7 @@ docs/
 | [진화적 아키텍처 분석](architecture/driver-analysis/evolutionary-architecture.md) | 변화 방향, 유지할 성질과 지속적 판정 기준 |
 | [운영·실패 분석](architecture/driver-analysis/operations-and-failure.md) | 장애 전파, 성능 저하, 자원 고갈과 복구 압력 |
 | [신뢰 경계 분석](architecture/driver-analysis/trust-boundaries.md) | 사실을 확정할 권한과 경계별 검증 |
-| [ADR-001 분산 캠페인 예산 예약](architecture/decisions/ADR-001-distributed-budget-reservation.md) | 중앙 원자적 예약 잠정 선택 |
+| [ADR-001 분산 캠페인 예산 예약](architecture/decisions/ADR-001-distributed-budget-reservation.md) | 리스형 예산 권한 선할당과 로컬 예약 선택 |
 
 ```text
 요구사항 → ASR → 동인 분석·종합 → ADR의 대안 비교·결정 → 공식 아키텍처 → 구현·검증
