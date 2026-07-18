@@ -1,6 +1,6 @@
 # 문서 안내
 
-현재 단계: 첫 번째 아키텍처 설계 주기 — ADR-002 리전별 독립 원장 결정 완료
+현재 단계: 첫 번째 아키텍처 설계 주기 — 핵심 ADR 6개 결정 완료
 
 ```text
 docs/
@@ -13,7 +13,11 @@ docs/
     ├── architecture-drivers.md
     ├── decisions/
     │   ├── ADR-001-distributed-budget-reservation.md
-    │   └── ADR-002-multi-region-ledger-topology.md
+    │   ├── ADR-002-multi-region-ledger-topology.md
+    │   ├── ADR-003-regional-budget-allocation.md
+    │   ├── ADR-004-auction-execution-path.md
+    │   ├── ADR-005-durable-budget-events.md
+    │   └── ADR-006-multi-region-service-topology.md
     └── driver-analysis/
         ├── data-intensive-systems.md
         ├── domain-boundaries.md
@@ -35,6 +39,10 @@ docs/
 | [신뢰 경계 분석](architecture/driver-analysis/trust-boundaries.md) | 사실을 확정할 권한과 경계별 검증 |
 | [ADR-001 분산 캠페인 예산 예약](architecture/decisions/ADR-001-distributed-budget-reservation.md) | 두 리전의 계층형 에스크로 예산 선택과 트레이드오프 |
 | [ADR-002 다중 리전 원장 구조](architecture/decisions/ADR-002-multi-region-ledger-topology.md) | 강한 책임 이전과 리전별 독립 원장 선택 |
+| [ADR-003 리전 예산 배분과 이전](architecture/decisions/ADR-003-regional-budget-allocation.md) | 초기 책임액·전역 예비액과 리전 요청형 이전 선택 |
+| [ADR-004 경매 실행 경로와 과부하 격리](architecture/decisions/ADR-004-auction-execution-path.md) | 기한·상한·DSP별 격리가 있는 병렬 실행 경로 선택 |
+| [ADR-005 금액 사건의 내구성과 복구](architecture/decisions/ADR-005-durable-budget-events.md) | 독립 발신함·수신함과 멱등 금액 사건 처리 선택 |
+| [ADR-006 다중 리전 서비스 배치와 장애 격리](architecture/decisions/ADR-006-multi-region-service-topology.md) | 두 리전 능동 실행과 리전별 독립 장애 격리 선택 |
 
 ```text
 요구사항 → ASR → 동인 분석·종합 → ADR의 대안 비교·결정 → 공식 아키텍처 → 구현·검증
