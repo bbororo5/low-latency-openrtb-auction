@@ -9,7 +9,7 @@ C4Context
     System_Ext(ssp, "SSP", "입찰을 요청하고 nurl·lurl·burl을 보낸다.")
     System(project_dsp, "프로젝트 DSP", "캠페인을 선택하고 예산을 예약·확정·해제한다.")
 
-    BiRel(ssp, project_dsp, "입찰 요청·응답과 금액 사건", "인증된 서버 간 계약")
+    BiRel(ssp, project_dsp, "입찰 요청·응답, 경매 결과와 금액 사건", "인증된 서버 간 계약")
 
     UpdateLayoutConfig($c4ShapeInRow="2", $c4BoundaryInRow="1")
 ```
