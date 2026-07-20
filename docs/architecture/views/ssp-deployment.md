@@ -1,6 +1,6 @@
 # SSP 다중 리전 배포
 
-상태: 실행 경계 검토안·기술 미정
+상태: 실행·데이터 배치 확정·기술 미정
 
 SSP 컨테이너 인스턴스와 기반 시설의 배치만 보여준다. 기술 제품과 실제 인스턴스 수는 정하지 않는다.
 
@@ -18,7 +18,7 @@ C4Deployment
             Deployment_Node(az_1b, "AZ B", "독립 장애 영역") {
                 Container(app_1b, "SSP 애플리케이션 인스턴스", "기술 미정", "경매·렌더링·통지를 처리한다.")
             }
-            ContainerDb(store_1, "SSP 성공 사실 저장소 복제본", "저장 기술 미정", "리전 1 접근 복제본이다.")
+            ContainerDb(store_1, "SSP 사실 저장소 복제본", "저장 기술 미정", "리전 1의 낙찰·과금 가능 사실과 발신함을 보존한다.")
         }
 
         Deployment_Node(region_2, "리전 2", "능동") {
@@ -28,7 +28,7 @@ C4Deployment
             Deployment_Node(az_2b, "AZ B", "독립 장애 영역") {
                 Container(app_2b, "SSP 애플리케이션 인스턴스", "기술 미정", "경매·렌더링·통지를 처리한다.")
             }
-            ContainerDb(store_2, "SSP 성공 사실 저장소 복제본", "저장 기술 미정", "리전 2 접근 복제본이다.")
+            ContainerDb(store_2, "SSP 사실 저장소 복제본", "저장 기술 미정", "리전 2의 낙찰·과금 가능 사실과 발신함을 보존한다.")
         }
     }
 
@@ -40,7 +40,7 @@ C4Deployment
     Rel(app_1b, store_1, "성공 전 기록")
     Rel(app_2a, store_2, "성공 전 기록")
     Rel(app_2b, store_2, "성공 전 기록")
-    BiRel(store_1, store_2, "성공 사실 RPO 0")
+    BiRel(store_1, store_2, "과금 가능 사실 RPO 0")
 
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
 ```
@@ -49,4 +49,4 @@ C4Deployment
 - 두 리전은 평상시 모두 요청을 처리한다.
 - 각 리전은 최소 두 AZ에 SSP 애플리케이션 인스턴스를 둔다.
 - 경매와 통지의 실행 자원은 같은 프로세스 안에서 격리한다.
-- 성공 사실 저장소의 구체적인 다중 AZ·다중 리전 구현은 기술 선택 단계에서 정한다.
+- 낙찰 결과는 렌더링 기한과 중복 판정 동안 복구 가능하게 보존한다. 성공으로 접수한 과금 가능 사실과 `burl` 발신 책임의 구체적인 다중 리전 RPO 0 구현은 기술 선택 단계에서 정한다.

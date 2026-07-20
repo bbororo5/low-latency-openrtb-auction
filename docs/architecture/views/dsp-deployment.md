@@ -1,6 +1,6 @@
 # 프로젝트 DSP 다중 리전 배포
 
-상태: 실행·예산 원장 배치 확정·캠페인 저장 배치 검토안·기술 미정
+상태: 실행·데이터 배치 확정·기술 미정
 
 프로젝트 DSP 컨테이너 인스턴스와 기반 시설의 배치만 보여준다. 전역 책임 원장과 각 리전 예산 원장은 독립된 물리 저장소 배포 경계다. 기술 제품과 실제 인스턴스 수는 정하지 않는다.
 
@@ -20,9 +20,9 @@ C4Deployment
                 Container(gateway_1b, "DSP 게이트웨이 인스턴스", "기술 미정", "요청을 분산하고 과부하를 차단한다.")
                 Container(app_1b, "DSP 애플리케이션 인스턴스", "기술 미정", "로컬 입찰과 예산 배경 처리를 실행한다.")
             }
-            ContainerDb(campaign_1, "캠페인 실행 원본 복제본", "저장 기술 미정", "리전 1 배포 원본이다.")
+            ContainerDb(campaign_1, "캠페인 데이터 복제본", "저장 기술 미정", "시험 전에 확정한 같은 버전을 제공한다.")
             ContainerDb(regional_1, "리전 1 예산 원장", "저장 기술 미정", "리전 1 책임액의 유일한 작성자다.")
-            ContainerDb(money_1, "금액 사건 저장소 복제본", "저장 기술 미정", "리전 1 접근 복제본이다.")
+            ContainerDb(money_1, "금액 통지 저장소 복제본", "저장 기술 미정", "리전 1에서 접수한 통지와 지급 근거를 보존한다.")
             ContainerDb(global_1, "전역 책임 원장 복제본", "저장 기술 미정", "분할·복제된 전역 권위다.")
         }
 
@@ -35,9 +35,9 @@ C4Deployment
                 Container(gateway_2b, "DSP 게이트웨이 인스턴스", "기술 미정", "요청을 분산하고 과부하를 차단한다.")
                 Container(app_2b, "DSP 애플리케이션 인스턴스", "기술 미정", "로컬 입찰과 예산 배경 처리를 실행한다.")
             }
-            ContainerDb(campaign_2, "캠페인 실행 원본 복제본", "저장 기술 미정", "리전 2 배포 원본이다.")
+            ContainerDb(campaign_2, "캠페인 데이터 복제본", "저장 기술 미정", "시험 전에 확정한 같은 버전을 제공한다.")
             ContainerDb(regional_2, "리전 2 예산 원장", "저장 기술 미정", "리전 2 책임액의 유일한 작성자다.")
-            ContainerDb(money_2, "금액 사건 저장소 복제본", "저장 기술 미정", "리전 2 접근 복제본이다.")
+            ContainerDb(money_2, "금액 통지 저장소 복제본", "저장 기술 미정", "리전 2에서 접수한 통지와 지급 근거를 보존한다.")
             ContainerDb(global_2, "전역 책임 원장 복제본", "저장 기술 미정", "분할·복제된 전역 권위다.")
         }
     }
@@ -50,18 +50,17 @@ C4Deployment
     Rel(gateway_1b, app_1b, "요청 분산")
     Rel(gateway_2a, app_2a, "요청 분산")
     Rel(gateway_2b, app_2b, "요청 분산")
-    Rel(app_1a, campaign_1, "배경 자료 갱신")
-    Rel(app_1a, regional_1, "권한·격리·회수")
+    Rel(app_1a, campaign_1, "시작 전 자료 적재")
+    Rel(app_1a, regional_1, "리스 발급·페이싱·격리·회수")
     Rel(app_1a, global_1, "책임액·확정 지출 집계")
     Rel(app_1a, money_1, "금액 사건 접수")
-    Rel(app_2a, campaign_2, "배경 자료 갱신")
-    Rel(app_2a, regional_2, "권한·격리·회수")
+    Rel(app_2a, campaign_2, "시작 전 자료 적재")
+    Rel(app_2a, regional_2, "리스 발급·페이싱·격리·회수")
     Rel(app_2a, global_2, "책임액·확정 지출 집계")
     Rel(app_2a, money_2, "금액 사건 접수")
-    BiRel(campaign_1, campaign_2, "버전 자료 복제")
     Rel(regional_1, regional_2, "세부 기록 복구 사본", "비동기")
     Rel(regional_2, regional_1, "세부 기록 복구 사본", "비동기")
-    BiRel(money_1, money_2, "금액 사실 RPO 0")
+    BiRel(money_1, money_2, "접수한 burl RPO 0")
     BiRel(global_1, global_2, "책임 이전 강한 보존")
 
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
@@ -69,6 +68,8 @@ C4Deployment
 
 - 전역 진입은 컨테이너가 아니라 배포 기반 시설이다.
 - 두 리전은 자기 책임액과 로컬 권한으로 독립 입찰한다.
+- 두 리전의 DSP는 시작 전에 같은 캠페인 버전과 체크섬을 확인하며 시험 중 갱신하지 않는다.
+- 리전별 페이싱은 자기 책임액의 리스 발급으로 수행하며 개별 리스 상태를 리전 간 교환하지 않는다.
 - 전역 책임 원장과 각 리전 예산 원장은 클러스터·장애·합의 범위를 공유하지 않는다.
 - 게이트웨이와 DSP 애플리케이션 인스턴스는 각각 리전 풀을 이루며 도식의 선은 인스턴스 간 고정 결합을 뜻하지 않는다.
 - 입찰과 예산 처리는 같은 애플리케이션 프로세스 안에서 실행 자원을 격리한다.
