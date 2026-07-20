@@ -13,7 +13,7 @@
 - DSP 회사별로 동시성, 연결과 시간 제한을 분리한다. 한 DSP의 지연은 그 DSP의 입찰만 제외한다.
 - 재시도는 경매 경로에서 하지 않는다.
 - 프로젝트 DSP는 요청 시점의 로컬 캠페인 자료와 로컬 예산 권한만 사용한다.
-- 캠페인 자료 갱신, 예산 보충, 사건 전달과 집계는 경매 경로와 실행 자원을 분리한다.
+- 캠페인 자료의 시작 전 적재, 예산 보충, 사건 전달과 집계는 경매 경로와 실행 자원을 분리한다.
 - 50ms는 호출자 관측 목표이고 `tmax=180ms`는 절대 무효화 상한이다. 내부 단계는 50ms 안에서 남은 기한만 사용한다.
 
 ```mermaid
@@ -23,7 +23,7 @@ flowchart TB
     subgraph SSP["SSP 회사 · 한 리전"]
         ENTRY["SSP 진입점<br/>수용량 제한"]
 
-        subgraph AUCTION["SSP 경매 서비스 · 복제 인스턴스"]
+        subgraph AUCTION["SSP 애플리케이션 · 경매 실행 자원"]
             ORCH["경매 조정·낙찰 결정<br/>절대 기한 소유"]
             AP["프로젝트 DSP 연동<br/>전용 동시성·연결"]
             AE1["외부 DSP 1 연동<br/>전용 동시성·연결"]
@@ -39,21 +39,21 @@ flowchart TB
     subgraph PDSP["프로젝트 DSP 회사 · 한 리전"]
         GW["DSP 게이트웨이<br/>복제 인스턴스·수용량 제한"]
 
-        subgraph BID["각 DSP 입찰 서비스 인스턴스"]
+        subgraph BID["각 DSP 애플리케이션 인스턴스"]
             HOT["입찰 처리기<br/>후보 선택·예산 예약"]
             CS["인스턴스 로컬<br/>캠페인 자료"]
             BR["인스턴스 로컬<br/>예산 권한"]
-            BG["배경 갱신·보충 작업"]
+            BG["자료 적재·배경 보충 작업"]
             HOT --- CS
             HOT --- BR
             BG -.-> CS
             BG -.-> BR
         end
 
-        CAMPAIGN["캠페인 실행 자료 배포"]
+        CAMPAIGN["버전형 캠페인 데이터"]
         LEDGER["리전 예산 원장"]
         GW --> HOT
-        BG -. "자료 갱신" .-> CAMPAIGN
+        BG -. "시작 전 적재" .-> CAMPAIGN
         BG -. "예산 보충" .-> LEDGER
     end
 
