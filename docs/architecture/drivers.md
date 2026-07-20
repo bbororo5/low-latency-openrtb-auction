@@ -2,9 +2,9 @@
 
 상태: 확정안
 
-근거: [아키텍처 중요 요구사항](asr.md), [제품·도메인 요구사항](../requirements/product-domain-requirements.md), [부하·데이터·검증 기준](../requirements/workload-data-verification.md)
+근거: [아키텍처 중요 요구사항](../requirements/quality.md), [제품·도메인 요구사항](../requirements/product.md), [부하·데이터·검증 기준](../requirements/workload.md)
 
-관점별 분석: [데이터 중심](driver-analysis/data-intensive-systems.md), [도메인 경계](driver-analysis/domain-boundaries.md), [진화적 아키텍처](driver-analysis/evolutionary-architecture.md), [운영·실패](driver-analysis/operations-and-failure.md), [신뢰 경계](driver-analysis/trust-boundaries.md)
+관점별 근거: [데이터](rationale/data.md), [도메인](rationale/domain.md), [진화](rationale/evolution.md), [운영·실패](rationale/failure.md), [신뢰](rationale/trust.md)
 
 ## 1. 핵심 동인
 

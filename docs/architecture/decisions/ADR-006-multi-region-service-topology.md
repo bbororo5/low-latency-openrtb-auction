@@ -2,7 +2,7 @@
 
 상태: 승인
 
-근거: [아키텍처 중요 요구사항](../asr.md), [ADR-002 다중 리전 원장 구조](ADR-002-multi-region-ledger-topology.md), [ADR-004 경매 실행 경로](ADR-004-auction-execution-path.md), [ADR-005 금액 사건의 내구성과 복구](ADR-005-durable-budget-events.md)
+근거: [아키텍처 중요 요구사항](../../requirements/quality.md), [ADR-002 다중 리전 원장 구조](ADR-002-multi-region-ledger-topology.md), [ADR-004 경매 실행 경로](ADR-004-auction-execution-path.md), [ADR-005 금액 사건의 내구성과 복구](ADR-005-durable-budget-events.md)
 
 ## 1. 결정
 

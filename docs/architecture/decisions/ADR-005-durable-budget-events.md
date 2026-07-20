@@ -2,7 +2,7 @@
 
 상태: 승인
 
-근거: [아키텍처 중요 요구사항](../asr.md), [ADR-001 분산 캠페인 예산 예약](ADR-001-distributed-budget-reservation.md)
+근거: [아키텍처 중요 요구사항](../../requirements/quality.md), [ADR-001 분산 캠페인 예산 예약](ADR-001-distributed-budget-reservation.md)
 
 ## 1. 결정
 

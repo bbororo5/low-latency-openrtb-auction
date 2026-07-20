@@ -2,7 +2,7 @@
 
 상태: 확정안
 
-근거: [제품·도메인 요구사항](../requirements/product-domain-requirements.md), [부하·데이터·검증 기준](../requirements/workload-data-verification.md)
+근거: [제품·도메인 요구사항](product.md), [부하·데이터·검증 기준](workload.md)
 
 ## 1. 목록
 

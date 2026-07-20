@@ -1,6 +1,6 @@
 # 운영과 실패 관점 검토
 
-검토 대상: [아키텍처 동인](../architecture-drivers.md)
+검토 대상: [아키텍처 동인](../drivers.md)
 
 ## 결론
 

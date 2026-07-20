@@ -2,7 +2,7 @@
 
 상태: 승인
 
-근거: [아키텍처 중요 요구사항](../asr.md), [아키텍처 동인](../architecture-drivers.md)
+근거: [아키텍처 중요 요구사항](../../requirements/quality.md), [아키텍처 동인](../drivers.md)
 
 ## 1. 결정
 
