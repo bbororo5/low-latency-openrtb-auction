@@ -29,10 +29,9 @@
 5. 부하 감소 뒤 30초 안에 재시작 없이 회복한다.
 6. 기존 잠재 지출은 통지 또는 95초 만료로 끝낸다.
 
-## ADR로 넘길 질문
+## 결정 결과
 
-- 경매와 외부 호출에 시간 예산을 어떻게 배분할 것인가?
-- 연결·대기열·처리 중 작업의 상한과 거절 기준은 무엇인가?
-- DSP 과금 통지 경로의 안전성과 적체를 어떤 신호로 판단해 입찰을 중지·재개할 것인가?
-- 인스턴스·AZ·리전 장애를 어떻게 감지하고 트래픽을 전환할 것인가?
-- 복구 완료를 성공률, 지연, 적체와 금액 상태로 어떻게 판정할 것인가?
+- [ADR-004](../decisions/ADR-004-auction-execution-path.md)는 절대 기한, 제한된 병렬성, DSP별 격리와 빠른 거절을 선택했다.
+- [ADR-001](../decisions/ADR-001-distributed-budget-reservation.md), [ADR-002](../decisions/ADR-002-multi-region-ledger-topology.md)와 [ADR-005](../decisions/ADR-005-durable-budget-events.md)는 장애 때 불확실한 예산을 격리하고 사건을 재처리한다.
+- [ADR-006](../decisions/ADR-006-multi-region-service-topology.md)은 두 능동 리전과 새 요청만 전환하는 방식을 선택했다.
+- 구체적인 시간·용량 임계치와 복구 판정은 [부하·검증 기준](../../requirements/workload.md)에서 시험으로 정한다.
