@@ -56,8 +56,9 @@ flowchart TB
             APP1["DSP 애플리케이션<br/>AZ별 복제·로컬 자료와 예산 권한"]
             CAMPAIGN1["버전형 캠페인 데이터"]
             REGIONAL1["리전 1 예산 원장<br/>리스·페이싱·격리·회수"]
-            GLOBAL1["전역 책임 원장 복제본"]
-            MONEY1["리전 1 금액 사건 기록<br/>BillingAccepted"]
+            REGIONAL2DR["리전 2 원장<br/>읽기 전용 복구 사본"]
+            GLOBAL1["전역 책임 원장<br/>PostgreSQL Multi-AZ<br/>단일 쓰기 권위"]
+            MONEY1["리전 1 금액 사건 기록<br/>접수·만료 거부 결정"]
             DL1 --> GW1
             GW1 --> APP1
             APP1 -. "시작 전 적재" .-> CAMPAIGN1
@@ -72,21 +73,22 @@ flowchart TB
             APP2["DSP 애플리케이션<br/>AZ별 복제·로컬 자료와 예산 권한"]
             CAMPAIGN2["버전형 캠페인 데이터"]
             REGIONAL2["리전 2 예산 원장<br/>리스·페이싱·격리·회수"]
-            GLOBAL2["전역 책임 원장 복제본"]
-            MONEY2["리전 2 금액 사건 기록<br/>BillingAccepted"]
+            REGIONAL1DR["리전 1 원장<br/>읽기 전용 복구 사본"]
+            GLOBAL2["전역 책임 원장<br/>비동기 복구 사본<br/>읽기 전용"]
+            MONEY2["리전 2 금액 사건 기록<br/>접수·만료 거부 결정"]
             DL2 --> GW2
             GW2 --> APP2
             APP2 -. "시작 전 적재" .-> CAMPAIGN2
             APP2 -. "리스 발급·페이싱" .-> REGIONAL2
-            APP2 -. "책임액 이전" .-> GLOBAL2
             APP2 --> MONEY2
         end
 
         DG --> DL1
         DG --> DL2
-        REGIONAL1 -. "복구용 비동기 사본" .-> REGIONAL2
-        REGIONAL2 -. "복구용 비동기 사본" .-> REGIONAL1
-        GLOBAL1 <==>|"책임 이전 강한 보존"| GLOBAL2
+        REGIONAL1 -. "복구용 비동기 사본" .-> REGIONAL1DR
+        REGIONAL2 -. "복구용 비동기 사본" .-> REGIONAL2DR
+        APP2 -. "책임액 이전<br/>홈 리전 호출" .-> GLOBAL1
+        GLOBAL1 -. "비동기 복구 사본" .-> GLOBAL2
         MONEY1 -. "비동기 병합·대조" .-> MONEY2
         MONEY2 -. "비동기 병합·대조" .-> MONEY1
     end

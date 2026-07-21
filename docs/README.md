@@ -30,7 +30,7 @@ docs/
     │   ├── ssp-deployment.md
     │   └── dsp-deployment.md
     ├── decisions/
-    │   └── ADR-001~007
+    │   └── ADR-001~008
     └── rationale/
         ├── data.md
         ├── domain.md
