@@ -32,5 +32,5 @@ SSP는 프로젝트 DSP의 캠페인과 내부 예약 정보를 해석하지 않
 ## 결정 결과
 
 - [제품 요구사항](../../requirements/product.md)은 경매·슬롯·예약 식별자와 60초·95초 기한으로 외부 주장을 내부 사실에 연결한다.
-- [ADR-005](../decisions/ADR-005-durable-budget-events.md)는 불투명한 예약 증표, 내구성 있는 발신함·수신함과 멱등 처리를 선택했다.
+- [ADR-004](../decisions/ADR-004-auction-execution-path.md)는 SSP의 인증된 렌더링 증표를 선택하고, [ADR-005](../decisions/ADR-005-durable-budget-events.md)는 DSP 예약 증표·내구 접수 증거와 멱등 처리를 선택했다.
 - 서버 인증, 증표 형식, 키 관리와 통지 주소 제한은 이 경계를 구현하는 상세 설계로 남긴다.

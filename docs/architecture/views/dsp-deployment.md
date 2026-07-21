@@ -22,7 +22,7 @@ C4Deployment
             }
             ContainerDb(campaign_1, "캠페인 데이터 복제본", "저장 기술 미정", "시험 전에 확정한 같은 버전을 제공한다.")
             ContainerDb(regional_1, "리전 1 예산 원장", "저장 기술 미정", "리전 1 책임액의 유일한 작성자다.")
-            ContainerDb(money_1, "금액 통지 저장소 복제본", "저장 기술 미정", "리전 1에서 접수한 통지와 지급 근거를 보존한다.")
+            ContainerDb(money_1, "리전 1 금액 사건 기록", "저장 기술 미정", "리전 1에서 접수한 통지와 접수 증거를 추가 전용으로 보존한다.")
             ContainerDb(global_1, "전역 책임 원장 복제본", "저장 기술 미정", "분할·복제된 전역 권위다.")
         }
 
@@ -37,7 +37,7 @@ C4Deployment
             }
             ContainerDb(campaign_2, "캠페인 데이터 복제본", "저장 기술 미정", "시험 전에 확정한 같은 버전을 제공한다.")
             ContainerDb(regional_2, "리전 2 예산 원장", "저장 기술 미정", "리전 2 책임액의 유일한 작성자다.")
-            ContainerDb(money_2, "금액 통지 저장소 복제본", "저장 기술 미정", "리전 2에서 접수한 통지와 지급 근거를 보존한다.")
+            ContainerDb(money_2, "리전 2 금액 사건 기록", "저장 기술 미정", "리전 2에서 접수한 통지와 접수 증거를 추가 전용으로 보존한다.")
             ContainerDb(global_2, "전역 책임 원장 복제본", "저장 기술 미정", "분할·복제된 전역 권위다.")
         }
     }
@@ -52,15 +52,16 @@ C4Deployment
     Rel(gateway_2b, app_2b, "요청 분산")
     Rel(app_1a, campaign_1, "시작 전 자료 적재")
     Rel(app_1a, regional_1, "리스 발급·페이싱·격리·회수")
-    Rel(app_1a, global_1, "책임액·확정 지출 집계")
+    Rel(app_1a, global_1, "책임 봉투 이전")
     Rel(app_1a, money_1, "금액 사건 접수")
     Rel(app_2a, campaign_2, "시작 전 자료 적재")
     Rel(app_2a, regional_2, "리스 발급·페이싱·격리·회수")
-    Rel(app_2a, global_2, "책임액·확정 지출 집계")
+    Rel(app_2a, global_2, "책임 봉투 이전")
     Rel(app_2a, money_2, "금액 사건 접수")
     Rel(regional_1, regional_2, "세부 기록 복구 사본", "비동기")
     Rel(regional_2, regional_1, "세부 기록 복구 사본", "비동기")
-    BiRel(money_1, money_2, "접수한 burl RPO 0")
+    Rel(money_1, money_2, "비동기 병합·대조")
+    Rel(money_2, money_1, "비동기 병합·대조")
     BiRel(global_1, global_2, "책임 이전 강한 보존")
 
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
