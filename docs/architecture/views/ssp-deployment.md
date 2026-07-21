@@ -18,7 +18,7 @@ C4Deployment
             Deployment_Node(az_1b, "AZ B", "독립 장애 영역") {
                 Container(app_1b, "SSP 애플리케이션 인스턴스", "기술 미정", "경매·렌더링·통지를 처리한다.")
             }
-            ContainerDb(store_1, "SSP 리전 1 금액 사건 기록", "저장 기술 미정", "리전 1의 청구·확정·미수집 사건을 추가 전용으로 보존한다.")
+            ContainerDb(store_1, "SSP 리전 1 금액 사건 기록", "RDS PostgreSQL Multi-AZ", "리전 1의 청구·확정·미수집 사건을 추가 전용으로 보존한다.")
         }
 
         Deployment_Node(region_2, "리전 2", "능동") {
@@ -28,7 +28,7 @@ C4Deployment
             Deployment_Node(az_2b, "AZ B", "독립 장애 영역") {
                 Container(app_2b, "SSP 애플리케이션 인스턴스", "기술 미정", "경매·렌더링·통지를 처리한다.")
             }
-            ContainerDb(store_2, "SSP 리전 2 금액 사건 기록", "저장 기술 미정", "리전 2의 청구·확정·미수집 사건을 추가 전용으로 보존한다.")
+            ContainerDb(store_2, "SSP 리전 2 금액 사건 기록", "RDS PostgreSQL Multi-AZ", "리전 2의 청구·확정·미수집 사건을 추가 전용으로 보존한다.")
         }
     }
 

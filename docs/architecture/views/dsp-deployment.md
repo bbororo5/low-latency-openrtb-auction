@@ -22,7 +22,7 @@ C4Deployment
             }
             ContainerDb(campaign_1, "캠페인 데이터 복제본", "저장 기술 미정", "시험 전에 확정한 같은 버전을 제공한다.")
             ContainerDb(regional_1, "리전 1 예산 원장", "저장 기술 미정", "리전 1 책임액의 유일한 작성자다.")
-            ContainerDb(money_1, "리전 1 금액 사건 기록", "저장 기술 미정", "리전 1에서 접수한 통지와 접수 증거를 추가 전용으로 보존한다.")
+            ContainerDb(money_1, "리전 1 금액 사건 기록", "RDS PostgreSQL Multi-AZ", "리전 1에서 접수한 통지와 최초 접수·거부 증거를 추가 전용으로 보존한다.")
             ContainerDb(global_1, "전역 책임 원장 복제본", "저장 기술 미정", "분할·복제된 전역 권위다.")
         }
 
@@ -37,7 +37,7 @@ C4Deployment
             }
             ContainerDb(campaign_2, "캠페인 데이터 복제본", "저장 기술 미정", "시험 전에 확정한 같은 버전을 제공한다.")
             ContainerDb(regional_2, "리전 2 예산 원장", "저장 기술 미정", "리전 2 책임액의 유일한 작성자다.")
-            ContainerDb(money_2, "리전 2 금액 사건 기록", "저장 기술 미정", "리전 2에서 접수한 통지와 접수 증거를 추가 전용으로 보존한다.")
+            ContainerDb(money_2, "리전 2 금액 사건 기록", "RDS PostgreSQL Multi-AZ", "리전 2에서 접수한 통지와 최초 접수·거부 증거를 추가 전용으로 보존한다.")
             ContainerDb(global_2, "전역 책임 원장 복제본", "저장 기술 미정", "분할·복제된 전역 권위다.")
         }
     }
