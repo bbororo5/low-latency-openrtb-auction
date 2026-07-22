@@ -13,9 +13,9 @@ C4Context
     System_Ext(external_dsp_1, "외부 DSP 1", "독립 모의 DSP다.")
     System_Ext(external_dsp_2, "외부 DSP 2", "독립 모의 DSP다.")
 
-    Rel(supplier, ssp, "경매 요청")
-    Rel(ad_client, ssp, "렌더링 성공 통지")
-    Rel(ssp, project_dsp, "입찰 요청·응답과 통지")
+    Rel(supplier, ssp, "경매 요청·응답")
+    Rel(ad_client, ssp, "렌더링 성공 통지·응답")
+    Rel(ssp, project_dsp, "입찰 요청·응답과 nurl·lurl·burl")
     Rel(ssp, external_dsp_1, "입찰 요청·응답과 통지")
     Rel(ssp, external_dsp_2, "입찰 요청·응답과 통지")
 

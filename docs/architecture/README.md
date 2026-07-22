@@ -1,6 +1,6 @@
 # 공식 아키텍처
 
-상태: C4 System Landscape·Level 1·Level 2 데이터 경계 확정, 지역 금액 장부·전역 책임 원장 기술 확정
+상태: C4 System Landscape·Level 1·Level 2 데이터 경계 확정, SSP Level 3 경계 검토 완료
 
 근거: [아키텍처 중요 요구사항](../requirements/quality.md), [아키텍처 동인](drivers.md), [ADR-001~008](decisions/)
 
@@ -13,11 +13,13 @@
 | C4 Level 1 | [프로젝트 DSP 시스템 관계](views/dsp-context.md) | 프로젝트 DSP 중심의 외부 시스템 관계 |
 | C4 Level 2 | [SSP 컨테이너](views/ssp-containers.md) | SSP의 실행·저장 단위와 외부 의존성 |
 | C4 Level 2 | [프로젝트 DSP 컨테이너](views/dsp-containers.md) | DSP의 입찰·예산·금액 사건 단위 |
+| C4 Level 3 | [SSP 애플리케이션 컴포넌트](views/ssp-components.md) | SSP 애플리케이션 내부 책임과 협력 |
 | Data | [데이터 접근·보존 기준](views/data.md) | 데이터별 Hot Path, 수명, 일관성과 복구 수준 |
 | C4 Deployment | [SSP 다중 리전 배포](views/ssp-deployment.md) | SSP 컨테이너 인스턴스와 장애 영역 |
 | C4 Deployment | [프로젝트 DSP 다중 리전 배포](views/dsp-deployment.md) | DSP 컨테이너 인스턴스·원장과 장애 영역 |
+| Technology | [SSP 기술 기준선](technology/ssp.md) | SSP의 확정 기술과 컴포넌트 뒤에 정할 기술 |
 
-C4 Level 3은 기술 선택 뒤 내부 구조를 설명할 가치가 있는 실행 컨테이너에만 작성한다. Level 4는 구현 구조가 생긴 뒤 필요할 때 코드에서 생성한다.
+C4 Level 3은 내부 책임을 설명할 가치가 있는 실행 컨테이너에만 작성한다. 현재는 SSP 애플리케이션 경계를 검토했으며 DSP는 별도로 다룬다. Level 4는 구현 구조가 생긴 뒤 필요할 때 코드에서 생성한다.
 
 Container Diagram에는 애플리케이션과 데이터 저장소만 두고, 리전·AZ·부하 분산·복제는 Deployment Diagram으로 분리한다.
 
@@ -43,7 +45,7 @@ Container Diagram에는 애플리케이션과 데이터 저장소만 두고, 리
 | 데이터 | 권위 | 보존 기준 |
 |---|---|---|
 | 경매 결과·렌더링 증표 | SSP | 경매 응답에서 인증된 증표로 전달하고 서버 상태는 요청 뒤 폐기 |
-| 청구 근거·`burl` 전달 책임 | SSP 지역 금액 사건 기록 | 리전 내부 내구 append, 다른 리전과 비동기 병합 |
+| 청구 근거·`burl` 전달 책임 | 리전별 SSP 청구 기록 DB | 리전 내부 내구 추가, 다른 리전과 비동기 병합 |
 | 캠페인 실행 자료 | 프로젝트 DSP | 시험 전 버전·체크섬 확인 뒤 로컬 불변 사본으로 적재 |
 | 총예산·전역 예비액·리전 책임 봉투 | 프로젝트 DSP 전역 책임 원장 | 책임 이전과 단일 소유권을 강하게 보존 |
 | DSP 권한·잠재 지출 | DSP 입찰 인스턴스와 리전 예산 원장 | 로컬 예약, 장애 시 상위 권한 격리 |
@@ -75,7 +77,7 @@ Container Diagram에는 애플리케이션과 데이터 저장소만 두고, 리
 
 ## 5. 기술 선택 경계
 
-지역 금액 사건 장부와 전역 책임 원장은 PostgreSQL 계열로 확정했지만 서로 다른 배포 경계다. 나머지 경계는 다음 단계에서 기술 후보가 아래 능력을 만족하는지 비교한다.
+지역 금액 사건 장부와 전역 책임 원장은 PostgreSQL 계열로 확정했지만 서로 다른 배포 경계다. SSP의 현재 기준과 선택 순서는 [SSP 기술 기준선](technology/ssp.md)을 따른다. DSP 기술은 DSP 컴포넌트 경계를 검토할 때 별도로 정한다.
 
 - 리전 내부 고가용과 높은 동시 권한 발급
 - 낮은 할당·GC 부담의 로컬 예약과 캠페인 조회

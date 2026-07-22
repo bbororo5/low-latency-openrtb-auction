@@ -29,8 +29,8 @@ SSP
 | 순간 부하 | 1,000 RPS, 60초 |
 | 정상 응답 | p99 ≤ 50ms |
 | 경매 제한 시간 | 기본 180ms |
-| 장애 범위 | 인스턴스 하나와 AZ 하나의 장애 허용 |
-| 금액 안전성 | 예산 초과·중복 과금 0건, RPO 0 |
+| 장애 범위 | 인스턴스·AZ·리전 하나의 장애를 부분 영향으로 격리 |
+| 금액 안전성 | 예산 초과·중복 과금 0건, 성공한 지역 금액 기록은 리전 내부 RPO 0 |
 
 수치는 특정 업체의 실측치가 아니라 재현 가능한 포트폴리오 기준이다.
 
@@ -44,10 +44,11 @@ SSP
 
 ## 현재 상태
 
-요구사항은 기준선 2.0으로 정리되었고 ASR을 협의 중이다. 현재 코드와 k6 결과는 초기 구현을 위한 참고로만 사용하며, 후속 아키텍처가 구현되기 전에는 합격 증거로 보지 않는다.
+요구사항·ASR·아키텍처 동인과 주요 ADR은 확정되었고 기술 기준선을 검토 중이다. 현재 코드와 k6 결과는 초기 구현을 위한 참고로만 사용하며, 새 아키텍처가 구현되기 전에는 합격 증거로 보지 않는다.
 
 - [문서 안내](docs/README.md)
-- [제품·도메인 요구사항](docs/requirements/product-domain-requirements.md)
-- [부하·데이터·검증 기준](docs/requirements/workload-data-verification.md)
-- [ASR](docs/architecture/asr.md)
-- [아키텍처 동인](docs/architecture/architecture-drivers.md)
+- [제품·도메인 요구사항](docs/requirements/product.md)
+- [아키텍처 중요 요구사항](docs/requirements/quality.md)
+- [부하·데이터·검증 기준](docs/requirements/workload.md)
+- [공식 아키텍처](docs/architecture/README.md)
+- [SSP 기술 기준선](docs/architecture/technology/ssp.md)
