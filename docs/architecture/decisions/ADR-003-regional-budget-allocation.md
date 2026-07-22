@@ -126,6 +126,6 @@ flowchart TB
 ## 8. 후속 작업
 
 - [ADR-004](ADR-004-auction-execution-path.md)는 기한·상한·DSP별 격리가 있는 병렬 경매 실행 경로를 선택했다.
-- [ADR-005](ADR-005-durable-budget-events.md)는 독립 지역 기록, 내구 접수 증거와 멱등 금액 사건 수렴을 선택했다.
+- [ADR-005](ADR-005-durable-budget-events.md)는 표준 OpenRTB 통지, DSP 내부 멱등 기록과 리스 단위 정산을 선택했다.
 - [ADR-008](ADR-008-global-responsibility-ledger-store.md)은 전역 원장의 PostgreSQL 단일 쓰기 권위와 자동 승격 금지를 선택했다.
 - 초기 배분율, 예비액 비율, 이전 단위와 임계치는 상세 설계와 부하 시험으로 정한다.

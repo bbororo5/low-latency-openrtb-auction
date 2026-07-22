@@ -23,7 +23,7 @@ C4Deployment
             ContainerDb(campaign_1, "캠페인 데이터 복제본", "저장 기술 미정", "시험 전에 확정한 같은 버전을 제공한다.")
             ContainerDb(regional_1, "리전 1 예산 원장", "저장 기술 미정", "리전 1 책임액의 유일한 작성자다.")
             ContainerDb(regional_2_dr, "리전 2 예산 원장 복구 사본", "저장 기술 미정", "리전 2 세부 기록의 읽기 전용 비동기 사본이다.")
-            ContainerDb(money_1, "리전 1 금액 사건 기록", "RDS PostgreSQL Multi-AZ", "리전 1에서 접수한 통지와 최초 접수·거부 증거를 추가 전용으로 보존한다.")
+            ContainerDb(money_1, "리전 1 금액 사건 기록", "RDS PostgreSQL Multi-AZ", "리전 1에서 접수한 통지의 내부 판정과 리스 정산 근거를 보존한다.")
             ContainerDb(global_1, "전역 책임 원장", "RDS PostgreSQL Multi-AZ", "전역 예비액과 책임 이전의 단일 쓰기 권위다.")
         }
 
@@ -39,7 +39,7 @@ C4Deployment
             ContainerDb(campaign_2, "캠페인 데이터 복제본", "저장 기술 미정", "시험 전에 확정한 같은 버전을 제공한다.")
             ContainerDb(regional_2, "리전 2 예산 원장", "저장 기술 미정", "리전 2 책임액의 유일한 작성자다.")
             ContainerDb(regional_1_dr, "리전 1 예산 원장 복구 사본", "저장 기술 미정", "리전 1 세부 기록의 읽기 전용 비동기 사본이다.")
-            ContainerDb(money_2, "리전 2 금액 사건 기록", "RDS PostgreSQL Multi-AZ", "리전 2에서 접수한 통지와 최초 접수·거부 증거를 추가 전용으로 보존한다.")
+            ContainerDb(money_2, "리전 2 금액 사건 기록", "RDS PostgreSQL Multi-AZ", "리전 2에서 접수한 통지의 내부 판정과 리스 정산 근거를 보존한다.")
             ContainerDb(global_2, "전역 책임 원장 복구 사본", "RDS PostgreSQL 읽기 복제본", "자동 승격하지 않는 비동기 복구 사본이다.")
         }
     }
@@ -53,17 +53,17 @@ C4Deployment
     Rel(gateway_2a, app_2a, "요청 분산")
     Rel(gateway_2b, app_2b, "요청 분산")
     Rel(app_1a, campaign_1, "시작 전 자료 적재")
-    Rel(app_1a, regional_1, "리스 발급·페이싱·격리·회수")
+    Rel(app_1a, regional_1, "리스 발급·페이싱·격리·정산")
     Rel(app_1a, global_1, "책임 봉투 이전")
     Rel(app_1a, money_1, "금액 사건 접수")
     Rel(app_2a, campaign_2, "시작 전 자료 적재")
-    Rel(app_2a, regional_2, "리스 발급·페이싱·격리·회수")
+    Rel(app_2a, regional_2, "리스 발급·페이싱·격리·정산")
     Rel(app_2a, global_1, "책임 봉투 이전", "홈 리전 호출")
     Rel(app_2a, money_2, "금액 사건 접수")
     Rel(regional_1, regional_1_dr, "세부 기록 복구 사본", "비동기")
     Rel(regional_2, regional_2_dr, "세부 기록 복구 사본", "비동기")
-    Rel(money_1, money_2, "비동기 병합·대조")
-    Rel(money_2, money_1, "비동기 병합·대조")
+    Rel(money_1, money_2, "비동기 내부 집계")
+    Rel(money_2, money_1, "비동기 내부 집계")
     Rel(global_1, global_2, "복구용 비동기 복제")
 
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")

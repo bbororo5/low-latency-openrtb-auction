@@ -18,7 +18,7 @@ C4Deployment
             Deployment_Node(az_1b, "AZ B", "독립 장애 영역") {
                 Container(app_1b, "SSP 애플리케이션 인스턴스", "기술 미정", "경매·렌더링·통지를 처리한다.")
             }
-            ContainerDb(store_1, "SSP 리전 1 금액 사건 기록", "RDS PostgreSQL Multi-AZ", "리전 1의 청구·확정·미수집 사건을 추가 전용으로 보존한다.")
+            ContainerDb(store_1, "SSP 리전 1 금액 사건 기록", "RDS PostgreSQL Multi-AZ", "리전 1의 청구 근거와 통지 전달 결과를 추가 전용으로 보존한다.")
         }
 
         Deployment_Node(region_2, "리전 2", "능동") {
@@ -28,7 +28,7 @@ C4Deployment
             Deployment_Node(az_2b, "AZ B", "독립 장애 영역") {
                 Container(app_2b, "SSP 애플리케이션 인스턴스", "기술 미정", "경매·렌더링·통지를 처리한다.")
             }
-            ContainerDb(store_2, "SSP 리전 2 금액 사건 기록", "RDS PostgreSQL Multi-AZ", "리전 2의 청구·확정·미수집 사건을 추가 전용으로 보존한다.")
+            ContainerDb(store_2, "SSP 리전 2 금액 사건 기록", "RDS PostgreSQL Multi-AZ", "리전 2의 청구 근거와 통지 전달 결과를 추가 전용으로 보존한다.")
         }
     }
 
@@ -40,8 +40,8 @@ C4Deployment
     Rel(app_1b, store_1, "성공 전 기록")
     Rel(app_2a, store_2, "성공 전 기록")
     Rel(app_2b, store_2, "성공 전 기록")
-    Rel(store_1, store_2, "비동기 병합·대조")
-    Rel(store_2, store_1, "비동기 병합·대조")
+    Rel(store_1, store_2, "비동기 내부 집계")
+    Rel(store_2, store_1, "비동기 내부 집계")
 
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
 ```

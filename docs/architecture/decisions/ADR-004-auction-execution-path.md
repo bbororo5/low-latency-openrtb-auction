@@ -139,6 +139,6 @@ flowchart TB
 
 ## 7. 후속 작업
 
-- [ADR-005](ADR-005-durable-budget-events.md)는 독립 지역 기록, 내구 접수 증거와 멱등 금액 사건 수렴을 선택했다.
+- [ADR-005](ADR-005-durable-budget-events.md)는 표준 OpenRTB 통지, DSP 내부 멱등 기록과 리스 단위 정산을 선택했다.
 - [ADR-006](ADR-006-multi-region-service-topology.md)은 두 리전 능동 실행과 리전별 독립 장애 격리를 선택했다.
 - 단계별 시간 예산, 동시성 상한, 연결 수와 차단·회복 임계치는 상세 설계와 부하 시험으로 정한다.
