@@ -6,12 +6,12 @@
 
 ```mermaid
 C4Deployment
-    title 프로젝트 DSP — 두 리전·다중 AZ 배포
+    title 프로젝트 DSP — 서울·도쿄 능동 리전과 다중 AZ 배포
 
     Deployment_Node(dsp_environment, "프로젝트 DSP 운영 환경", "독립 배포·운영 경계") {
         Deployment_Node(dsp_edge, "전역 진입", "분산 트래픽 기반 시설", "건강한 능동 리전으로 새 연결을 전달한다.")
 
-        Deployment_Node(region_1, "리전 1", "능동") {
+        Deployment_Node(region_1, "서울 · ap-northeast-2", "능동") {
             Deployment_Node(az_1a, "AZ A", "독립 장애 영역") {
                 Container(gateway_1a, "DSP 게이트웨이 인스턴스", "기술 미정", "요청을 분산하고 과부하를 차단한다.")
                 Container(app_1a, "DSP 애플리케이션 인스턴스", "기술 미정", "로컬 입찰과 예산 배경 처리를 실행한다.")
@@ -21,13 +21,13 @@ C4Deployment
                 Container(app_1b, "DSP 애플리케이션 인스턴스", "기술 미정", "로컬 입찰과 예산 배경 처리를 실행한다.")
             }
             ContainerDb(campaign_1, "캠페인 데이터 복제본", "저장 기술 미정", "시험 전에 확정한 같은 버전을 제공한다.")
-            ContainerDb(regional_1, "리전 1 예산 원장", "저장 기술 미정", "리전 1 책임액의 유일한 작성자다.")
-            ContainerDb(regional_2_dr, "리전 2 예산 원장 복구 사본", "저장 기술 미정", "리전 2 세부 기록의 읽기 전용 비동기 사본이다.")
-            ContainerDb(money_1, "리전 1 금액 사건 기록", "RDS PostgreSQL Multi-AZ", "리전 1에서 접수한 통지의 내부 판정과 리스 정산 근거를 보존한다.")
+            ContainerDb(regional_1, "서울 예산 원장", "저장 기술 미정", "서울 책임액의 유일한 작성자다.")
+            ContainerDb(regional_2_dr, "도쿄 예산 원장 복구 사본", "저장 기술 미정", "도쿄 세부 기록의 읽기 전용 비동기 사본이다.")
+            ContainerDb(money_1, "서울 금액 사건 기록", "RDS PostgreSQL Multi-AZ", "서울에서 접수한 통지의 내부 판정과 리스 정산 근거를 보존한다.")
             ContainerDb(global_1, "전역 책임 원장", "RDS PostgreSQL Multi-AZ", "전역 예비액과 책임 이전의 단일 쓰기 권위다.")
         }
 
-        Deployment_Node(region_2, "리전 2", "능동") {
+        Deployment_Node(region_2, "도쿄 · ap-northeast-1", "능동") {
             Deployment_Node(az_2a, "AZ A", "독립 장애 영역") {
                 Container(gateway_2a, "DSP 게이트웨이 인스턴스", "기술 미정", "요청을 분산하고 과부하를 차단한다.")
                 Container(app_2a, "DSP 애플리케이션 인스턴스", "기술 미정", "로컬 입찰과 예산 배경 처리를 실행한다.")
@@ -37,9 +37,9 @@ C4Deployment
                 Container(app_2b, "DSP 애플리케이션 인스턴스", "기술 미정", "로컬 입찰과 예산 배경 처리를 실행한다.")
             }
             ContainerDb(campaign_2, "캠페인 데이터 복제본", "저장 기술 미정", "시험 전에 확정한 같은 버전을 제공한다.")
-            ContainerDb(regional_2, "리전 2 예산 원장", "저장 기술 미정", "리전 2 책임액의 유일한 작성자다.")
-            ContainerDb(regional_1_dr, "리전 1 예산 원장 복구 사본", "저장 기술 미정", "리전 1 세부 기록의 읽기 전용 비동기 사본이다.")
-            ContainerDb(money_2, "리전 2 금액 사건 기록", "RDS PostgreSQL Multi-AZ", "리전 2에서 접수한 통지의 내부 판정과 리스 정산 근거를 보존한다.")
+            ContainerDb(regional_2, "도쿄 예산 원장", "저장 기술 미정", "도쿄 책임액의 유일한 작성자다.")
+            ContainerDb(regional_1_dr, "서울 예산 원장 복구 사본", "저장 기술 미정", "서울 세부 기록의 읽기 전용 비동기 사본이다.")
+            ContainerDb(money_2, "도쿄 금액 사건 기록", "RDS PostgreSQL Multi-AZ", "도쿄에서 접수한 통지의 내부 판정과 리스 정산 근거를 보존한다.")
             ContainerDb(global_2, "전역 책임 원장 복구 사본", "RDS PostgreSQL 읽기 복제본", "자동 승격하지 않는 비동기 복구 사본이다.")
         }
     }
@@ -74,7 +74,7 @@ C4Deployment
 - 두 리전의 DSP는 시작 전에 같은 캠페인 버전과 체크섬을 확인하며 시험 중 갱신하지 않는다.
 - 리전별 페이싱은 자기 책임액의 리스 발급으로 수행하며 개별 리스 상태를 리전 간 교환하지 않는다.
 - 전역 책임 원장과 각 리전 예산 원장은 클러스터·장애·합의 범위를 공유하지 않는다.
-- 전역 책임 원장은 리전 1을 홈으로 표시한 단일 쓰기 권위다. 리전 2 복구 사본은 지역 활성화 증거 대조 없이 자동 승격하지 않는다.
+- 전역 책임 원장은 서울을 홈으로 표시한 단일 쓰기 권위다. 도쿄 복구 사본은 지역 활성화 증거 대조 없이 자동 승격하지 않는다.
 - 게이트웨이와 DSP 애플리케이션 인스턴스는 각각 리전 풀을 이루며 도식의 선은 인스턴스 간 고정 결합을 뜻하지 않는다.
 - 입찰과 예산 처리는 같은 애플리케이션 프로세스 안에서 실행 자원을 격리한다.
 - AZ B의 DSP 애플리케이션도 같은 지역 저장소 관계를 가지며 중복 선은 생략했다.

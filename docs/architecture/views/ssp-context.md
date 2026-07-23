@@ -10,8 +10,8 @@ C4Context
     System_Ext(ad_client, "광고 표시 클라이언트", "렌더링 성공을 통지한다.")
     System(ssp, "SSP", "세 DSP의 입찰로 경매하고 렌더링 결과를 통지한다.")
     System_Ext(project_dsp, "프로젝트 DSP", "캠페인 예산을 예약해 입찰하고 통지를 접수한다.")
-    System_Ext(external_dsp_1, "외부 DSP 1", "독립 모의 DSP다.")
-    System_Ext(external_dsp_2, "외부 DSP 2", "독립 모의 DSP다.")
+    System_Ext(external_dsp_1, "외부 경쟁 DSP 1", "낙찰 경쟁을 만드는 독립 모의 서비스다.")
+    System_Ext(external_dsp_2, "외부 경쟁 DSP 2", "낙찰 경쟁을 만드는 독립 모의 서비스다.")
 
     Rel(supplier, ssp, "경매 요청·응답")
     Rel(ad_client, ssp, "렌더링 성공 통지·응답")

@@ -27,8 +27,8 @@ flowchart TB
         subgraph AUCTION["SSP 애플리케이션 · 경매 실행 자원"]
             ORCH["경매 조정·낙찰 결정<br/>절대 기한 소유"]
             AP["프로젝트 DSP 연동<br/>전용 동시성·연결"]
-            AE1["외부 DSP 1 연동<br/>전용 동시성·연결"]
-            AE2["외부 DSP 2 연동<br/>전용 동시성·연결"]
+            AE1["외부 경쟁 DSP 1 연동<br/>전용 동시성·연결"]
+            AE2["외부 경쟁 DSP 2 연동<br/>전용 동시성·연결"]
             ORCH --- AP
             ORCH --- AE1
             ORCH --- AE2
@@ -58,12 +58,12 @@ flowchart TB
         BG -. "예산 보충" .-> LEDGER
     end
 
-    subgraph ED1["외부 DSP 회사 1"]
-        D1["독립 모의 DSP"]
+    subgraph ED1["외부 경쟁 DSP 회사 1"]
+        D1["경쟁 조건용 모의 DSP"]
     end
 
-    subgraph ED2["외부 DSP 회사 2"]
-        D2["독립 모의 DSP"]
+    subgraph ED2["외부 경쟁 DSP 회사 2"]
+        D2["경쟁 조건용 모의 DSP"]
     end
 
     S --> ENTRY

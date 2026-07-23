@@ -19,8 +19,8 @@ C4Context
         System(project_dsp, "프로젝트 DSP", "캠페인 선택·입찰·예산 예약과 과금을 책임진다.")
     }
 
-    System_Ext(external_dsp_1, "외부 DSP 1", "독립 회사를 나타내는 모의 입찰 시스템이다.")
-    System_Ext(external_dsp_2, "외부 DSP 2", "독립 회사를 나타내는 모의 입찰 시스템이다.")
+    System_Ext(external_dsp_1, "외부 경쟁 DSP 1", "낙찰 경쟁을 만드는 모의 입찰 시스템이다.")
+    System_Ext(external_dsp_2, "외부 경쟁 DSP 2", "낙찰 경쟁을 만드는 모의 입찰 시스템이다.")
 
     Rel(supplier, ssp, "경매 요청")
     Rel(ad_client, ssp, "렌더링 성공 통지")
@@ -32,5 +32,5 @@ C4Context
 ```
 
 - SSP와 프로젝트 DSP는 모두 구현 범위지만 서로 다른 회사·소프트웨어 시스템이다.
-- 외부 DSP는 프로젝트 DSP 게이트웨이를 사용하지 않는다.
+- 외부 경쟁 DSP는 프로젝트 DSP 게이트웨이를 사용하지 않으며, 배치·예산·장애 복구는 시험 범위가 아니다.
 - 공급자 애플리케이션, 광고 표시 클라이언트와 외부 DSP 내부는 구현하지 않는다.
